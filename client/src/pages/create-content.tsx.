@@ -1,0 +1,22 @@
+// Check video duration (10 seconds to 7 minutes)
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(videoData.file);
+    video.onloadedmetadata = () => {
+      const duration = video.duration;
+      // 10 seconds minimum, 420 seconds (7 minutes) maximum
+      if (duration < 10 || duration > 420) {
+        toast({
+          title: "Invalid video length",
+          description: "Videos must be between 10 seconds and 7 minutes long",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("title", videoData.title);
+      formData.append("description", videoData.description);
+      formData.append("video", videoData.file!);
+      
+      createVideoMutation.mutate(formData);
+    };

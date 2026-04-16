@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMOOCHES - Live Stream</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background-color: #f8f8f8;
+    }
+    .header {
+      background: linear-gradient(to right, #ec4899, #8b5cf6);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .live-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .live-indicator {
+      background-color: #ef4444;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-right: 0.5rem;
+      display: flex;
+      align-items: center;
+    }
+    .live-indicator::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: white;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+    .live-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+    .live-player {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background-color: black;
+      margin-bottom: 1rem;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .channel-info {
+      display: flex;
+      padding: 1rem;
+      background-color: white;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .channel-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background-color: #ec4899;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 1.25rem;
+      margin-right: 1rem;
+    }
+    .channel-details {
+      flex: 1;
+    }
+    .channel-name {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+    .channel-stats {
+      display: flex;
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    .channel-stats div {
+      margin-right: 1rem;
+      display: flex;
+      align-items: center;
+    }
+    .channel-stats svg {
+      width: 16px;
+      height: 16px;
+      margin-right: 0.25rem;
+    }
+    .subscribe-btn {
+      background-color: #ec4899;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .subscribe-btn:hover {
+      background-color: #db2777;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .tab {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      color: #6b7280;
+      font-weight: 500;
+      position: relative;
+    }
+    .tab.active {
+      color: #ec4899;
+    }
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: #ec4899;
+    }
+    .chat-box {
+      height: 300px;
+      background-color: white;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-y: auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .chat-message {
+      display: flex;
+    }
+    .chat-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #6366f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 0.75rem;
+      margin-right: 0.5rem;
+      flex-shrink: 0;
+    }
+    .chat-content {
+      flex: 1;
+    }
+    .chat-name {
+      font-weight: bold;
+      font-size: 0.875rem;
+      margin-bottom: 0.125rem;
+    }
+    .chat-text {
+      font-size: 0.875rem;
+      color: #374151;
+    }
+    .chat-input {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .chat-input input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      outline: none;
+    }
+    .chat-input input:focus {
+      border-color: #ec4899;
+    }
+    .send-btn {
+      background-color: #ec4899;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+    .send-btn:hover {
+      background-color: #db2777;
+    }
+    .back-button {
+      display: block;
+      margin: 2rem auto;
+      padding: 0.5rem 1rem;
+      background-color: #1f2937;
+      color: white;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      text-align: center;
+      width: fit-content;
+    }
+    .stream-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      background-color: #111;
+      padding: 2rem;
+    }
+    .status-circle {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      margin-right: 8px;
+      display: inline-block;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>SMOOCHES</h1>
+  </div>
+  
+  <div class="container">
+    <div class="live-header">
+      <div class="live-indicator">LIVE</div>
+      <div class="live-title">Dance Night with DJ Kiki</div>
+    </div>
+    
+    <div class="live-player">
+      <!-- Embedded YouTube stream or live player -->
+      <iframe 
+        width="100%" 
+        height="100%" 
+        src="https://www.youtube.com/embed/5qap5aO4i9A" 
+        title="Live Stream" 
+        frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowfullscreen>
+      </iframe>
+    </div>
+    
+    <div class="channel-info">
+      <div class="channel-avatar">K</div>
+      <div class="channel-details">
+        <div class="channel-name">Kiki's Channel</div>
+        <div class="channel-stats">
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <span>12.3K followers</span>
+          </div>
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span>4.5K watching</span>
+          </div>
+        </div>
+        <button class="subscribe-btn" onclick="this.textContent = this.textContent === 'Subscribe' ? 'Subscribed' : 'Subscribe'">Subscribe</button>
+      </div>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this, 'chat')">Live Chat</div>
+      <div class="tab" onclick="switchTab(this, 'info')">Info</div>
+      <div class="tab" onclick="switchTab(this, 'schedule')">Schedule</div>
+    </div>
+    
+    <div id="chat" class="tab-content">
+      <div class="chat-box" id="chat-box">
+        <!-- Chat messages will be added here -->
+      </div>
+      
+      <div class="chat-input">
+        <input type="text" id="message-input" placeholder="Say something...">
+        <button class="send-btn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+    
+    <div id="info" class="tab-content" style="display: none;">
+      <div style="background-color: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.125rem;">About this stream</h3>
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+          Join DJ Kiki for a night of dance music and good vibes! We're playing all your favorite hits and taking requests in the chat. Don't forget to subscribe to get notifications for future streams.
+        </p>
+        <h4 style="margin-bottom: 0.5rem; font-size: 1rem;">Stream Rules</h4>
+        <ul style="color: #4b5563; padding-left: 1.5rem;">
+          <li>Keep it positive and respectful</li>
+          <li>No spam or self-promotion</li>
+          <li>Have fun and enjoy the music!</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div id="schedule" class="tab-content" style="display: none;">
+      <div style="background-color: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.125rem;">Upcoming Streams</h3>
+        <div style="border-bottom: 1px solid #e5e7eb; padding: 0.75rem 0;">
+          <div style="font-weight: bold;">Friday Night Vibes</div>
+          <div style="color: #6b7280; font-size: 0.875rem;">Friday, May 17 • 8:00 PM</div>
+        </div>
+        <div style="border-bottom: 1px solid #e5e7eb; padding: 0.75rem 0;">
+          <div style="font-weight: bold;">Sunday Chill Session</div>
+          <div style="color: #6b7280; font-size: 0.875rem;">Sunday, May 19 • 2:00 PM</div>
+        </div>
+        <div style="padding: 0.75rem 0;">
+          <div style="font-weight: bold;">Midweek Mix</div>
+          <div style="color: #6b7280; font-size: 0.875rem;">Wednesday, May 22 • 7:00 PM</div>
+        </div>
+      </div>
+    </div>
+    
+    <a href="/" class="back-button">Back to Main App</a>
+  </div>
+
+  <script>
+    // Sample chat messages
+    const sampleMessages = [
+      { name: "MusicFan42", avatar: "M", text: "Hey everyone! The stream is 🔥 today!" },
+      { name: "DanceQueen", avatar: "D", text: "Love this track! What's the name?" },
+      { name: "NightOwl", avatar: "N", text: "Been waiting all week for this stream" },
+      { name: "BeatMaster", avatar: "B", text: "The bass on this one is incredible" },
+      { name: "ChillVibes", avatar: "C", text: "Just subscribed! Can't believe I wasn't following before" },
+      { name: "Kiki", avatar: "K", text: "Thanks for joining everyone! Drop your requests in the chat" },
+    ];
+    
+    // Initialize chat with sample messages
+    const chatBox = document.getElementById('chat-box');
+    
+    // Add sample messages with slight delay to simulate real chat
+    let messageIndex = 0;
+    function addInitialMessages() {
+      if (messageIndex < sampleMessages.length) {
+        const message = sampleMessages[messageIndex];
+        const msgElement = createMessageElement(message.name, message.avatar, message.text);
+        chatBox.appendChild(msgElement);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        messageIndex++;
+        setTimeout(addInitialMessages, Math.random() * 2000 + 1000);
+      }
+    }
+    
+    // Create chat message element
+    function createMessageElement(name, avatar, text) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message';
+      
+      const avatarDiv = document.createElement('div');
+      avatarDiv.className = 'chat-avatar';
+      avatarDiv.style.backgroundColor = getRandomColor(name);
+      avatarDiv.textContent = avatar;
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'chat-content';
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'chat-name';
+      nameDiv.textContent = name;
+      
+      const textDiv = document.createElement('div');
+      textDiv.className = 'chat-text';
+      textDiv.textContent = text;
+      
+      contentDiv.appendChild(nameDiv);
+      contentDiv.appendChild(textDiv);
+      
+      msgDiv.appendChild(avatarDiv);
+      msgDiv.appendChild(contentDiv);
+      
+      return msgDiv;
+    }
+    
+    // Get random color for avatar
+    function getRandomColor(name) {
+      const colors = ['#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+      const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return colors[hash % colors.length];
+    }
+    
+    // Send message from input
+    function sendMessage() {
+      const input = document.getElementById('message-input');
+      const text = input.value.trim();
+      
+      if (text) {
+        const msgElement = createMessageElement('You', 'Y', text);
+        chatBox.appendChild(msgElement);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        input.value = '';
+        
+        // Simulate response after a delay
+        setTimeout(() => {
+          const responses = [
+            { name: "Kiki", avatar: "K", text: "Thanks for your message!" },
+            { name: "MusicFan42", avatar: "M", text: "I agree with you!" },
+            { name: "DanceQueen", avatar: "D", text: "Nice point!" }
+          ];
+          const response = responses[Math.floor(Math.random() * responses.length)];
+          const responseElement = createMessageElement(response.name, response.avatar, response.text);
+          chatBox.appendChild(responseElement);
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }, Math.random() * 3000 + 1000);
+      }
+    }
+    
+    // Handle Enter key in chat input
+    document.getElementById('message-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+    
+    // Switch tabs
+    function switchTab(tabElement, tabId) {
+      // Update active tab
+      document.querySelector('.tab.active').classList.remove('active');
+      tabElement.classList.add('active');
+      
+      // Hide all tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+      });
+      
+      // Show selected tab content
+      document.getElementById(tabId).style.display = 'block';
+    }
+    
+    // Start chat messages when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(addInitialMessages, 1000);
+    });
+  </script>
+</body>
+</html>

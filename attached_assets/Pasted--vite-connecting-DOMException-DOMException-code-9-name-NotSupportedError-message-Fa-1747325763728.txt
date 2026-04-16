@@ -1,0 +1,29 @@
+[vite] connecting...
+DOMException {}
+
+DOMException {code: 9, name: "NotSupportedError", message: "Failed to load because no supported source was found.", INDEX_SIZE_ERR: 1, DOMSTRING_SIZE_ERR: 2, …}
+
+DOMException {code: 9, name: "NotSupportedError", message: "Failed to load because no supported source was found.", INDEX_SIZE_ERR: 1, DOMSTRING_SIZE_ERR: 2, …}
+
+DOMException {code: 9, name: "NotSupportedError", message: "Failed to load because no supported source was found.", INDEX_SIZE_ERR: 1, DOMSTRING_SIZE_ERR: 2, …}
+
+at t.value (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+DOMException {code: 9, name: "NotSupportedError", message: "Failed to load because no supported source was found.", INDEX_SIZE_ERR: 1, DOMSTRING_SIZE_ERR: 2, …}
+
+Audio playback error: 
+Event {isTrusted: true}
+
+at t.value (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Audio playback error: 
+Event {isTrusted: true}
+
+at t.value (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://97fe0eaf-0c3a-415e-a6a1-1274eff6753b-00-34198mdut4ic2.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMOOCHES - Demo Menu</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background-color: #f8f8f8;
+    }
+    .header {
+      background: linear-gradient(to right, #ec4899, #8b5cf6);
+      color: white;
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    .title {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: #1f2937;
+      text-align: center;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background-color: white;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    }
+    .card-image {
+      width: 100%;
+      height: 160px;
+      background-size: cover;
+      background-position: center;
+    }
+    .card-content {
+      padding: 1.5rem;
+    }
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: #1f2937;
+    }
+    .card-description {
+      color: #6b7280;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .card-btn {
+      display: inline-block;
+      background-color: #ec4899;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.375rem;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .card-btn:hover {
+      background-color: #db2777;
+    }
+    .features {
+      margin-top: 4rem;
+    }
+    .features h2 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1.75rem;
+      color: #1f2937;
+    }
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 2rem;
+    }
+    .feature-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .feature-icon {
+      width: 50px;
+      height: 50px;
+      background-color: #f3e8ff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: #8b5cf6;
+    }
+    .feature-title {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: #1f2937;
+    }
+    .feature-description {
+      color: #6b7280;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .footer {
+      background-color: #1f2937;
+      color: white;
+      padding: 2rem 1rem;
+      text-align: center;
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>SMOOCHES</h1>
+    <p>Interactive audio streaming platform for content creators</p>
+  </div>
+  
+  <div class="container">
+    <h2 class="title">Explore Working Demos</h2>
+    
+    <div class="cards">
+      <div class="card">
+        <div class="card-image" style="background-image: url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470&q=80');"></div>
+        <div class="card-content">
+          <h3 class="card-title">Video Feed</h3>
+          <p class="card-description">Browse through a collection of videos from creators. Like, comment, and share your favorites.</p>
+          <a href="/working-feed.html" class="card-btn">Open Feed</a>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-image" style="background-image: url('https://images.unsplash.com/photo-1516873240891-720c9204647b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1500&q=80');"></div>
+        <div class="card-content">
+          <h3 class="card-title">Live Stream</h3>
+          <p class="card-description">Join a live stream with real-time chat. Interact with the creator and other viewers.</p>
+          <a href="/working-live.html" class="card-btn">Join Live</a>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-image" style="background-image: url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1500&q=80');"></div>
+        <div class="card-content">
+          <h3 class="card-title">Simple App</h3>
+          <p class="card-description">Experience a simple standalone version of the app with no complex dependencies.</p>
+          <a href="/simple-smooches.html" class="card-btn">Open App</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="features">
+      <h2>Platform Features</h2>
+      
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </div>
+          <h3 class="feature-title">Video Sharing</h3>
+          <p class="feature-description">Share your content with the world. Upload videos and gain followers.</p>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="3"></circle>
+              <circle cx="12" cy="12" r="6"></circle>
+            </svg>
+          </div>
+          <h3 class="feature-title">Live Broadcasting</h3>
+          <p class="feature-description">Start a live stream and connect with your audience in real-time.</p>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"></path>
+            </svg>
+          </div>
+          <h3 class="feature-title">Community Chat</h3>
+          <p class="feature-description">Engage with creators and other users through comments and live chat.</p>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+          <h3 class="feature-title">Creator Monetization</h3>
+          <p class="feature-description">Earn money from your content through subscriptions and tips.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p>SMOOCHES - Connect and collaborate through interactive audio streaming</p>
+  </div>
+</body>
+</html>

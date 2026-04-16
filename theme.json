@@ -1,0 +1,27 @@
+{
+  "variant": "vibrant",
+  "primary": "hsl(16, 100%, 45%)",
+  "appearance": "light",
+  "radius": 1,
+  "custom": {
+    "background": "hsl(0, 0%, 98%)",
+    "foreground": "hsl(0, 0%, 10%)",
+    "card": "hsl(0, 0%, 100%)",
+    "card-foreground": "hsl(0, 0%, 10%)",
+    "popover": "hsl(0, 0%, 100%)",
+    "popover-foreground": "hsl(0, 0%, 10%)",
+    "primary": "hsl(16, 100%, 35%)",
+    "primary-foreground": "hsl(0, 0%, 98%)",
+    "secondary": "hsl(220, 100%, 40%)",
+    "secondary-foreground": "hsl(0, 0%, 98%)",
+    "muted": "hsl(0, 0%, 92%)",
+    "muted-foreground": "hsl(0, 0%, 45%)",
+    "accent": "hsl(30, 100%, 35%)",
+    "accent-foreground": "hsl(0, 0%, 98%)",
+    "destructive": "hsl(0, 84%, 50%)",
+    "destructive-foreground": "hsl(0, 0%, 98%)",
+    "border": "hsl(0, 0%, 85%)",
+    "input": "hsl(0, 0%, 95%)",
+    "ring": "hsl(16, 100%, 50%)"
+  }
+}

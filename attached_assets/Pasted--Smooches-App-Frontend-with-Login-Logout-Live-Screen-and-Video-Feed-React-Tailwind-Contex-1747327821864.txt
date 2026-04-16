@@ -1,0 +1,156 @@
+// Smooches App – Frontend with Login/Logout, Live Screen, and Video Feed (React + Tailwind + Context)
+
+import React, { useState, createContext, useContext } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
+
+const AuthContext = createContext();
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+
+  const login = (username) => setUser({ name: username });
+  const logout = () => setUser(null);
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+function useAuth() {
+  return useContext(AuthContext);
+}
+
+function LoginPage() {
+  const [name, setName] = useState("");
+  const { login } = useAuth();
+
+  return (
+    <div className="p-6 max-w-sm mx-auto text-center">
+      <h1 className="text-2xl font-bold mb-4">Login to Smooches</h1>
+      <input
+        className="border p-2 rounded w-full mb-4"
+        placeholder="Enter your name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <button
+        className="bg-pink-500 text-white px-4 py-2 rounded"
+        onClick={() => login(name)}
+      >
+        Login
+      </button>
+    </div>
+  );
+}
+
+function HomePage() {
+  const { user, logout } = useAuth();
+  return (
+    <div className="p-6 text-center">
+      <h1 className="text-3xl font-bold mb-4">Welcome to Smooches, {user?.name} 💋</h1>
+      <div className="mb-6 space-x-4">
+        <Link to="/live" className="text-pink-600 underline">Join Live</Link>
+        <Link to="/feed" className="text-pink-600 underline">Watch Feed</Link>
+      </div>
+      <button
+        className="bg-gray-800 text-white px-4 py-2 rounded"
+        onClick={logout}
+      >
+        Logout
+      </button>
+    </div>
+  );
+}
+
+function LivePage() {
+  return (
+    <div className="p-6 text-center">
+      <h2 className="text-2xl font-bold mb-4">🔴 Live Smooches</h2>
+      <iframe
+        className="w-full h-64 rounded border"
+        src="https://www.youtube.com/embed/live_stream?channel=YOUR_CHANNEL_ID"
+        title="Live Stream"
+        allowFullScreen
+      ></iframe>
+      <p className="mt-4 text-sm text-gray-600">Live stream is powered via external service. Replace URL with your live source.</p>
+    </div>
+  );
+}
+
+function FeedPage() {
+  const videos = [
+    { id: 1, user: "Kiki", url: "https://somecdn.com/video1.mp4", caption: "🔥 Morning vibes!" },
+    { id: 2, user: "Lash", url: "https://somecdn.com/video2.mp4", caption: "Manifesting chaos 💅" },
+    { id: 3, user: "Big Tank", url: "https://somecdn.com/video3.mp4", caption: "Late-night rants incoming." },
+  ];
+
+  return (
+    <div className="p-6 space-y-6">
+      <h2 className="text-2xl font-bold text-center mb-4">🎥 Video Feed</h2>
+      {videos.map((vid) => (
+        <div key={vid.id} className="bg-white rounded-xl shadow p-4">
+          <video
+            className="w-full rounded"
+            src={vid.url}
+            controls
+            loop
+          />
+          <div className="mt-2 text-sm text-gray-700">
+            <strong>@{vid.user}</strong>: {vid.caption}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PrivateRoute({ children }) {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" />;
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <nav className="p-4 bg-pink-100 text-center">
+          <Link to="/" className="mx-4">Home</Link>
+          <Link to="/login" className="mx-4">Login</Link>
+          <Link to="/live" className="mx-4">Live</Link>
+          <Link to="/feed" className="mx-4">Feed</Link>
+        </nav>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <HomePage />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/live"
+            element={
+              <PrivateRoute>
+                <LivePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/feed"
+            element={
+              <PrivateRoute>
+                <FeedPage />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;
