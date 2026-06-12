@@ -8,6 +8,7 @@ set -e
 # Configuration
 APP_NAME="smooches"
 AWS_REGION="us-east-1"
+PORT=8030
 ECR_REPO="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${APP_NAME}"
 
 echo "🚀 Starting SMOOCHES deployment to AWS..."

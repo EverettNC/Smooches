@@ -142,8 +142,8 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 5000
-          ToPort: 5000
+          FromPort: 8030
+          ToPort: 8030
           SourceSecurityGroupId: !Ref ALBSecurityGroup
       Tags:
         - Key: Name
@@ -252,7 +252,7 @@ Resources:
         - Name: !Ref AppName
           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}:latest'
           PortMappings:
-            - ContainerPort: 5000
+            - ContainerPort: 8030
               Protocol: tcp
           Environment:
             - Name: NODE_ENV
@@ -288,7 +288,7 @@ Resources:
           AssignPublicIp: ENABLED
       LoadBalancers:
         - ContainerName: !Ref AppName
-          ContainerPort: 5000
+          ContainerPort: 8030
           TargetGroupArn: !Ref TargetGroup
 
   # Application Load Balancer
@@ -308,7 +308,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Name: !Sub '${AppName}-tg'
-      Port: 5000
+      Port: 8030
       Protocol: HTTP
       VpcId: !Ref VPC
       TargetType: ip

@@ -34,11 +34,11 @@ COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/server ./server
 
 # Expose port
-EXPOSE 5000
+EXPOSE 8030
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=5000
+ENV PORT=8030
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs

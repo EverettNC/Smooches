@@ -1,8 +1,10 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupSimpleAuth, requireAuth, getCurrentUserId } from "./simple-auth";
+import { setupAuth } from "./auth";
 import {
   insertVideoSchema,
   insertCommentSchema,
@@ -60,6 +62,25 @@ const uploadAvatar = multer({
   }
 });
 
+// Audio upload for radio / audio content (3-5min focus)
+const audioStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, path.join(process.cwd(), 'public/uploads/videos')); // reuse videos dir or audio
+  },
+  filename: (_req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, 'audio-' + unique + path.extname(file.originalname));
+  }
+});
+const uploadAudio = multer({
+  storage: audioStorage,
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/')) cb(null, true);
+    else cb(new Error('Only audio/video files allowed for radio/video'));
+  }
+});
+
 // WebSocket tracking
 const streamClients = new Map<number, Set<WebSocket>>();
 const reactionClients = new Map<string, Set<WebSocket>>();
@@ -88,6 +109,8 @@ export function registerRoutes(app: Express): Server {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
   });
 
+  // Passport.js + simple session auth for full stack compatibility
+  setupAuth(app);
   setupSimpleAuth(app);
 
   const httpServer = createServer(app);
@@ -140,6 +163,241 @@ export function registerRoutes(app: Express): Server {
         if (reactionClients.get(reactionTarget)?.size === 0) reactionClients.delete(reactionTarget);
       }
     });
+  });
+
+  // ── SMOOCHES CREATOR API (8030) ────────────────────────────────────────────
+  // Video (3-5min + radio), Live (stream+gifting), Ambassador (monetization+subs+earnings)
+  // Passport.js auth enabled. All flows creator-first: 85% revenue to creator. No exploitation.
+  // Implements exact Upward return + Integration from DISPATCH.md (trace_id + from:"smooches").
+  // Core work (detect, extract, verify, post, gift, etc.) runs BEFORE the required POST to /source/ingest.
+  // Flow is complete ONLY once the upward call succeeds.
+
+  async function forwardToIngest(payload: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const data = JSON.stringify(payload);
+      const reqHttp = http.request({
+        hostname: '127.0.0.1',
+        port: 8000,
+        path: '/source/ingest',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+      }, (res) => {
+        let body = '';
+        res.on('data', (c) => body += c);
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 400) {
+            return reject(new Error(`ingest ${res.statusCode}: ${body}`));
+          }
+          try { resolve(JSON.parse(body || '{}')); } catch { resolve({}); }
+        });
+      });
+      reqHttp.on('error', (e) => { reject(e); });
+      reqHttp.write(data); reqHttp.end();
+    });
+  }
+
+  function makeTraceId(): string {
+    return `smooches-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  app.get("/smooches/identity", requireAuth, async (req, res) => {
+    try {
+      const userId = getCurrentUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const earnings = await storage.getEarnings(userId);
+      const total = earnings.reduce((s, e) => s + parseFloat((e.amount as any) || '0'), 0);
+      const subsCount = (await storage.getSubscribers(userId)).length;
+      const pUser = (req as any).user; // from Passport
+      res.json({
+        id: user.id, username: user.username, displayName: user.displayName, avatar: user.avatar,
+        role: user.role, ambassador: (user.role === 'creator') || !!(pUser && pUser.role === 'creator'),
+        earningsTotal: total, subscriberCount: subsCount,
+        monetizationEnabled: true, creatorCutPercent: 85,
+        platform: "Smooches - creator monetization forward"
+      });
+    } catch (e) { res.status(500).json({ error: "Identity failed" }); }
+  });
+
+  // POST /smooches/video (3-5min + radio). Handles 'video' or 'audio' field.
+  // Core work then exact upward dispatch per DISPATCH.md.
+  app.post("/smooches/video", requireAuth, uploadAudio.fields([{ name: 'video', maxCount: 1 }, { name: 'audio', maxCount: 1 }]), async (req: any, res) => {
+    try {
+      const userId = getCurrentUserId(req)!;
+      const files = req.files || {};
+      const file = (files.video && files.video[0]) || (files.audio && files.audio[0]);
+      const { title, description, contentType = (files.audio ? 'radio' : 'video'), duration, sourceUrl } = req.body;
+      if (!title) return res.status(400).json({ error: "Title required" });
+      if (!file && !sourceUrl) return res.status(400).json({ error: "No media file (use field video or audio)" });
+
+      // === Core work: detect, extract, verify, post (per DISPATCH.md) ===
+      const detectedType = contentType; // detect
+      const url = sourceUrl || `/uploads/videos/${file.filename}`;
+      const extractedDuration = duration ? Number(duration) : null; // extract
+      // verify (3-5min focus for video/radio; allow if unspecified)
+      if (detectedType === 'video' && extractedDuration != null) {
+        if (extractedDuration < 180 || extractedDuration > 300) {
+          console.log(`[verify] video duration ${extractedDuration}s outside 180-300s focus (still accepted)`);
+        }
+      }
+      let record: any;
+      if (detectedType === 'radio') {
+        record = await storage.createRadioStation({ name: title, description: description || null, streamUrl: url, coverImage: null, isActive: true, userId } as any);
+      } else {
+        record = await storage.createVideo({ userId, title, description: description || null, videoUrl: url, thumbnail: null, isLive: false });
+      }
+      // post complete; no direct gift on plain video (gifting via reactions/transactions)
+
+      // Build exact upward payload shape from DISPATCH.md 'Integration'
+      const trace_id = makeTraceId();
+      const dispatch = {
+        trace_id,
+        from: "smooches",
+        type: detectedType,
+        source: {
+          sourceUrl: url,
+          title,
+          userId,
+          duration: extractedDuration,
+          meta: { radio: detectedType === 'radio' }
+        },
+        result: {
+          success: true,
+          record
+        },
+        metadata: {
+          action: "video",
+          creatorCutPercent: 85,
+          timestamp: new Date().toISOString(),
+          platform: "Smooches"
+        },
+        status: "processed"
+      };
+
+      const ingest = await forwardToIngest(dispatch); // flow complete only on success
+      res.status(201).json({ success: true, record, ingest, creatorRevenueShare: "85%", note: "3-5min videos + radio supported", trace_id });
+    } catch (e: any) { res.status(500).json({ error: e.message || "video failed" }); }
+  });
+
+  // Live streaming + gifting entrypoint. Creates live marker, enables gifting via existing tx.
+  // Core work then exact upward dispatch per DISPATCH.md.
+  app.post("/smooches/live", requireAuth, async (req, res) => {
+    try {
+      const userId = getCurrentUserId(req)!;
+      const { title, description, streamKey } = req.body;
+      if (!title) return res.status(400).json({ error: "title required" });
+
+      // === Core work: detect, extract, verify, post, gift (per DISPATCH.md) ===
+      const detectedType = 'live';
+      const liveUrl = streamKey ? `live:${streamKey}` : 'live:ws';
+      // extract + verify (live always allowed)
+      const live = await storage.createVideo({ userId, title, description: description || null, videoUrl: liveUrl, thumbnail: null, isLive: true });
+      // post done; gift path: clients use POST /api/transactions (type=gift) + WS for realtime
+      // (ambassador uplift available after enrollment)
+
+      const trace_id = makeTraceId();
+      const dispatch = {
+        trace_id,
+        from: "smooches",
+        type: detectedType,
+        source: {
+          sourceUrl: live.videoUrl,
+          title,
+          userId,
+          meta: { gifting: true, realtime: 'ws' }
+        },
+        result: {
+          success: true,
+          live
+        },
+        metadata: {
+          action: "live",
+          creatorCutPercent: 85,
+          timestamp: new Date().toISOString(),
+          platform: "Smooches"
+        },
+        status: "processed"
+      };
+
+      const ingest = await forwardToIngest(dispatch); // complete only on success
+      res.status(201).json({ success: true, live, ingest, ws: '/ws', gifting: 'POST /api/transactions type=gift', creatorCut: '85% + Ambassador uplift', trace_id });
+    } catch (e: any) { res.status(500).json({ error: "live failed" }); }
+  });
+
+  // Ambassador Program flow: enroll, subscriptions, earnings. Amazon Prime + podcast integration flags.
+  // Enforces creator-friendly economics (85%+ to creator), transparent.
+  // Core work then exact upward dispatch per DISPATCH.md.
+  app.post("/smooches/ambassador", requireAuth, async (req, res) => {
+    try {
+      const userId = getCurrentUserId(req)!;
+      const { action = 'enroll', tier = 'silver', amount = '9.99', amazonPrime = false, podcast = false, subscriptionDetails } = req.body;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "no user" });
+
+      // === Core work: detect, extract, verify, post, gift (per DISPATCH.md) ===
+      const detectedType = 'ambassador';
+      const results: any = {};
+      // detect/extract flags
+      const flags = { amazonPrime: !!amazonPrime, podcast: !!podcast, tier };
+      if (action === 'enroll') {
+        const updated = await storage.updateUser(userId, { role: 'creator' });
+        results.user = { ...updated, password: undefined };
+        results.ambassador = {
+          status: 'enrolled',
+          amazonPrimeFeatured: flags.amazonPrime,
+          podcastDistribution: flags.podcast,
+          creatorRevenueShare: 85,
+          platformFee: 15,
+          perks: 'Priority ingest, Prime placement, podcast syndication, boosted discovery'
+        };
+      }
+      if (action === 'subscription' || subscriptionDetails) {
+        const subPayload = {
+          userId: subscriptionDetails?.subscriberId || userId,
+          creatorId: userId,
+          status: 'active' as const,
+          amount: String(amount),
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 30 * 86400000),
+        };
+        results.subscription = await storage.createSubscription(subPayload as any);
+      }
+      if (action === 'earnings' || amount) {
+        const month = new Date().toISOString().slice(0, 7);
+        const creatorShare = (parseFloat(String(amount)) * 0.85).toFixed(2);
+        results.earnings = await storage.createEarnings({ userId, amount: creatorShare, type: 'subscription', month } as any);
+        results.payoutNote = "Immediate 85% credit to earnings; Ambassador Prime/podcast bonuses extra.";
+      }
+      // verify implicit via role/auth; post/gift via earnings + sub (85% creator share enforced)
+
+      const trace_id = makeTraceId();
+      const dispatch = {
+        trace_id,
+        from: "smooches",
+        type: detectedType,
+        source: {
+          sourceUrl: 'ambassador-enroll',
+          title: action,
+          userId,
+          meta: flags
+        },
+        result: {
+          success: true,
+          ...results
+        },
+        metadata: {
+          action: "ambassador",
+          creatorCutPercent: 85,
+          timestamp: new Date().toISOString(),
+          platform: "Smooches"
+        },
+        status: "processed"
+      };
+
+      const ingest = await forwardToIngest(dispatch); // complete only on success
+      res.json({ success: true, ...results, message: "Smooches Ambassador: fair monetization, no exploitation.", trace_id, ingest });
+    } catch (e: any) { res.status(500).json({ error: "ambassador failed: " + e.message }); }
   });
 
   // ── USERS ──────────────────────────────────────────────────────────────────

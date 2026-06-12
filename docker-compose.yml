@@ -4,9 +4,10 @@ services:
   smooches-app:
     build: .
     ports:
-      - "5000:5000"
+      - "8030:8030"
     environment:
       - NODE_ENV=production
+      - PORT=8030
       - DATABASE_URL=${DATABASE_URL}
       - SESSION_SECRET=${SESSION_SECRET}
     depends_on:
