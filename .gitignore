@@ -1,4 +1,240 @@
+.eggs/
+dist/
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+__tmp/*
+*.pyi
+.mypycache
+.ruff_cache
 node_modules
+backend/**/templates/
+.claude/
+.env
+# Environment and secrets
+.env
+.env.local
+*.env
+
+# Virtual environments - CRITICAL: Keep these out of GitHub!
+Alpha/
+alphavox/
+alphavox_env/
+venv/
+env/
+.venv/
+*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+
+# Runtime data
+*.log
+*.pid
+*.seed
+*.pid.lock
+audio_cache/
+derek_memory/
+data/behavior_patterns/
+*.sqlite
+*.db
+*.secret
+*.AWS
+*.key
+
+# OS files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.code-workspace
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build and distribution
+dist/
+build/
+*.egg-info/
+
+# Node modules (if any)
+node_modules/
+
+# Large files that should not be in git
+*.mp4
+*.avi
+*.mov
+*.wav
+*.mp3
+*.pkl
+*.model
+*.h5
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pkl
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+*.log
+
+# --- Virtual Environments ---
+venv/
+env/
+*.env
+.venv/
+.alphavox-env/
+ENV/
+env.bak/
+.venv.bak/
+
+# --- OS / Editor Files ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*.tmp
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Testing / Coverage ---
+.coverage
+.tox/
+.nox/
+htmlcov/
+.pytest_cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints
+*.ipynb
+
+# --- Replit ---
+.replit
+*.replit
+*.replit_cache/
+
+# --- Environment Config ---
+.env
+.env.*
+!.env.example
+*.secret
+secrets.json
+config.json
+settings.py
+
+# --- MCP Configuration Files (contain sensitive info) ---
+claude_desktop_config*.json
+*mcp*.json
+mcp_diagnostic.py
+*.code-workspace
+
+# --- Test and Development Files ---
+test_mcp_client.py
+fixed_mcp_server.py
+working_mcp_server.py
+*_diagnostic.py
+*_test.py
+
+# --- Generated Documentation/Reports ---
+MCP_*.md
+*_RESOLVED.md
+*_GUIDE.md
+
+# --- Database / Media Files ---
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.csv
+*.tsv
+*.mp4
+*.wav
+*.mp3
+*.avi
+*.webm
+
+# --- Frontend / Build ---
+node_modules/
+npm-debug.log
+yarn-error.log
+build/
+public/build/
+*.bundle.js
+*.map
+
+# --- Deployment ---
+*.pem
+*.key
+*.crt
+
+# --- Mac Specific ---
+.AppleDouble
+.LSOverride
+Icon?
+
+# --- Backup files ---
+*~
+*.bak
+*.tmp
+*.orig
+*.old
+
+# --- Git Hooks ---
+.pre-commit-config.yaml
+pre-commit.log
+
+# --- AlphaVox-Specific ---
+profiles/
+data/color_schemes.json
+alphavox.db
+snapshots/
+uploads/
+models/__snapshots__/
+
+# --- Ignore everything in root `downloads` ---
+/Downloads/
+vox-env/
+key.txt
+ ../.github/
+        ../.idx/
+        ../.kiro/
+          ../.augment/
+        ../.clinerules/
+        ../.cursor/
+         ../.roo/
+        ../.rules
+              ../.augment/
+        ../.clinerules/
+        ../.cursor/
+        ../.github/
+        ../.idx/
+        ../.kiro/
+        ../.mcp.json
+        ../.roo/
+        ../.rules
+        ../.windsurf/node_modules
 dist
 .DS_Store
 server/public

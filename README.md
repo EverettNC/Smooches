@@ -6,9 +6,10 @@ A comprehensive social media platform for content creators featuring video shari
 
 - **Video Content**: 3-5 minute videos with likes, comments, and gifting
 - **Radio Stations**: Schedule and broadcast audio content 
-- **Live Streaming**: Interactive real-time content with chat
-- **Ambassador Program**: Integration with Amazon Prime and podcast platforms
-- **Monetization**: Earnings dashboard and subscription management
+- **Live Streaming**: Interactive real-time content with chat + gifting
+- **Ambassador Program**: Integration with Amazon Prime features + podcast distribution for top creators
+- **Monetization**: Earnings dashboard, subscription management, gifting. **Creator-first 85% revenue share** — no exploitation
+- **Upward Integration**: All creator flows dispatch to central registry (traceable, governed) after core work
 
 ## Quick Start
 
@@ -66,18 +67,23 @@ npm run dev
 NODE_ENV=production
 DATABASE_URL=postgresql://user:pass@host:port/db
 SESSION_SECRET=your-session-secret
-PORT=5000
+PORT=8030
 ```
 
 ## API Endpoints
 
+### Core
 - `GET /api/health` - Health check
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `GET /api/videos` - Get videos
-- `POST /api/videos` - Upload video
-- `GET /api/radio-stations` - Get radio stations
-- `POST /api/radio-stations` - Create radio station
+
+### Creator API (port 8030 focus)
+- `GET /smooches/identity` - Current creator identity + earnings/sub count + 85% cut info
+- `POST /smooches/video` - Upload 3-5min video or radio audio (with duration focus)
+- `POST /smooches/live` - Start live stream + gifting support
+- `POST /smooches/ambassador` - Enroll in Ambassador Program (Amazon Prime + podcast distribution), manage subs/earnings
+
+All /smooches/* flows perform core work (detect/extract/verify/post/gift) then strict upward POST to http://127.0.0.1:8000/source/ingest with trace_id + from:"smooches" (see DISPATCH.md). Flow completes only on ingest success.
+
+Legacy /api/* endpoints remain for compatibility (videos, radio, auth, earnings, etc.).
 
 ## Database Schema
 
@@ -90,11 +96,12 @@ The platform uses PostgreSQL with tables for:
 
 ## Production Notes
 
-- Uses Fargate for containerized deployment
+- Uses Fargate for containerized deployment (port 8030)
 - RDS PostgreSQL for data persistence
 - Application Load Balancer for high availability
 - CloudWatch for logging and monitoring
 - ECR for container image storage
+- Strict creator revenue enforcement (85%) and upward dispatch to central ingest service per DISPATCH.md
 
 ## Security
 

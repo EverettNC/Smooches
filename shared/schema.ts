@@ -90,9 +90,11 @@ export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  type: text("type").notNull(), // 'donation', 'subscription', 'tip'
-  status: text("status").notNull(), // 'pending', 'completed', 'failed'
+  type: text("type").notNull(),
+  status: text("status").notNull(),
   fromUserId: integer("from_user_id").references(() => users.id),
+  videoId: integer("video_id").references(() => videos.id),
+  targetUserId: integer("target_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

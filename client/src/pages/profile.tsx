@@ -285,9 +285,10 @@ export default function Profile() {
           </TabsContent>
 
           <TabsContent value="live">
-            <div className="text-center py-8 text-muted-foreground">
-              <p className="text-lg">Live streaming coming soon</p>
-              <p className="text-sm mt-2">Set up your live streaming schedule and go live!</p>
+            <div className="text-center py-8">
+              <p className="text-lg font-medium">Ready to go live?</p>
+              <p className="text-sm text-muted-foreground mt-1">Use the Live page or Create content to start streaming with chat + gifting.</p>
+              <Button className="mt-4" onClick={() => window.location.href = '/live'}>Go to Live</Button>
             </div>
           </TabsContent>
 

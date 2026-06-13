@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,14 +19,16 @@ import {
 import { type Video } from "@shared/schema";
 import { EmojiReactions } from "./emoji-reactions";
 import { useAuth } from "@/hooks/use-auth-simple";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface VideoPlayerProps {
   video: Video;
   autoPlay?: boolean;
+  onEnded?: () => void;
 }
 
-export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
+export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showGiftPanel, setShowGiftPanel] = useState(false);
@@ -34,11 +37,29 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
   const { user } = useAuth();
   const [progress, setProgress] = useState(0);
   
-  const [comments, setComments] = useState([
-    { id: 1, username: "musiclover", text: "This beat is fire! 🔥", timestamp: "2m ago", avatar: "https://api.dicebear.com/7.x/micah/svg?seed=musiclover" },
-    { id: 2, username: "dancequeen", text: "Love the choreography!", timestamp: "5m ago", avatar: "https://api.dicebear.com/7.x/micah/svg?seed=dancequeen" },
-    { id: 3, username: "beatmaker", text: "Who produced this track?", timestamp: "10m ago", avatar: "https://api.dicebear.com/7.x/micah/svg?seed=beatmaker" }
-  ]);
+  const [realLikes, setRealLikes] = useState(video.likes || 0);
+  const [realComments, setRealComments] = useState<any[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
+  const { toast } = useToast();
+
+  const loadComments = async () => {
+    setCommentsLoading(true);
+    try {
+      const res = await fetch(`/api/videos/${video.id}/comments`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setRealComments(data || []);
+      }
+    } catch {}
+    setCommentsLoading(false);
+  };
+
+  useEffect(() => {
+    if (showComments) {
+      loadComments();
+    }
+  }, [showComments, video.id]);
 
   const giftOptions = [
     { id: 1, name: "Rose", icon: "🌹", price: 5 },
@@ -114,44 +135,59 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
     }
   };
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
+  const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (comment.trim() && user) {
-      const newComment = {
-        id: Date.now(),
-        username: user.username,
-        text: comment,
-        timestamp: "Just now",
-        avatar: user.avatar || `https://api.dicebear.com/7.x/micah/svg?seed=${user.username}`
-      };
-      setComments([newComment, ...comments]);
-      setComment("");
+    if (!comment.trim() || !user) return;
+    const text = comment.trim();
+    setComment("");
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ videoId: video.id, content: text })
+      });
+      if (res.ok) {
+        const newC = await res.json();
+        setRealComments(prev => [{ id: newC.id, username: user.username, text: newC.content, timestamp: 'Just now', avatar: user.avatar || `https://api.dicebear.com/7.x/micah/svg?seed=${user.username}` }, ...prev]);
+      }
+    } catch {
+      setRealComments(prev => [{ id: Date.now(), username: user.username, text, timestamp: 'Just now', avatar: user.avatar || `https://api.dicebear.com/7.x/micah/svg?seed=${user.username}` }, ...prev]);
     }
   };
 
-  const sendGift = (giftId: number) => {
-    console.log(`Sending gift ${giftId} to creator of video ${video.id}`);
-    
+  const sendGift = async (giftId: number) => {
     const giftOption = giftOptions.find(gift => gift.id === giftId);
-    if (giftOption) {
-      const giftElement = document.createElement('div');
-      giftElement.className = 'gift-animation';
-      giftElement.textContent = giftOption.icon;
-      giftElement.style.cssText = `
-        position: absolute;
-        font-size: 48px;
-        bottom: 50%;
-        left: ${Math.random() * 80 + 10}%;
-        animation: float-up 3s ease-out forwards;
-        z-index: 20;
-      `;
-      
-      document.getElementById('gift-container')?.appendChild(giftElement);
-      
-      setTimeout(() => {
-        giftElement.remove();
-      }, 3000);
-    }
+    if (!giftOption) { setShowGiftPanel(false); return; }
+
+    try {
+      await apiRequest('POST', '/api/transactions', {
+        amount: String(giftOption.price),
+        type: 'gift',
+        status: 'completed',
+        fromUserId: user?.id || null,
+        videoId: video.id
+      });
+      toast({ title: "Gift sent!", description: `$${giftOption.price} — 85% credited to creator` });
+    } catch {}
+
+    const giftElement = document.createElement('div');
+    giftElement.className = 'gift-animation';
+    giftElement.textContent = giftOption.icon;
+    giftElement.style.cssText = `
+      position: absolute;
+      font-size: 48px;
+      bottom: 50%;
+      left: ${Math.random() * 80 + 10}%;
+      animation: float-up 3s ease-out forwards;
+      z-index: 20;
+    `;
+    
+    document.getElementById('gift-container')?.appendChild(giftElement);
+    
+    setTimeout(() => {
+      giftElement.remove();
+    }, 3000);
     
     setShowGiftPanel(false);
   };
@@ -164,7 +200,6 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
         ref={videoRef}
         src={video.videoUrl}
         className="absolute inset-0 w-full h-full object-contain"
-        loop
         playsInline
         muted
         autoPlay={autoPlay}
@@ -178,6 +213,7 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
             setIsPlaying(true);
           }
         }}
+        onEnded={() => onEnded && onEnded()}
         onError={(e) => {
           const video = e.currentTarget;
           if (video.src && !video.src.includes('sample')) {
@@ -229,10 +265,27 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
           
           <div className="flex flex-col items-center gap-5 ml-4">
             <div className="flex flex-col items-center">
-              <Button variant="ghost" size="icon" className="rounded-full bg-black/30 backdrop-blur-md hover:bg-white/20">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full bg-black/30 backdrop-blur-md hover:bg-white/20"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/videos/${video.id}/like`, { method: 'POST', credentials: 'include' });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setRealLikes(data.likes || realLikes + 1);
+                    } else {
+                      setRealLikes(prev => prev + 1);
+                    }
+                  } catch {
+                    setRealLikes(prev => prev + 1);
+                  }
+                }}
+              >
                 <Heart className="w-6 h-6 text-white" />
               </Button>
-              <span className="text-white text-xs mt-1">2.4K</span>
+              <span className="text-white text-xs mt-1">{realLikes}</span>
             </div>
             
             <div className="flex flex-col items-center">
@@ -244,7 +297,7 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
               >
                 <MessageCircle className="w-6 h-6 text-white" />
               </Button>
-              <span className="text-white text-xs mt-1">{comments.length}</span>
+              <span className="text-white text-xs mt-1">{realComments.length}</span>
             </div>
             
             <div className="flex flex-col items-center">
@@ -300,7 +353,10 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-white text-lg font-bold">Send a Gift</h3>
+              <div>
+                <h3 className="text-white text-lg font-bold">Send a Gift</h3>
+                <p className="text-[10px] text-primary">85% goes to the creator</p>
+              </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -355,24 +411,27 @@ export function VideoPlayer({ video, autoPlay = false }: VideoPlayerProps) {
             
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
-                {comments.map(comment => (
-                  <div key={comment.id} className="flex gap-3">
+                {realComments.map((c: any) => (
+                  <div key={c.id} className="flex gap-3">
                     <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
                       <img 
-                        src={comment.avatar} 
-                        alt={comment.username} 
+                        src={c.avatar} 
+                        alt={c.username} 
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-white font-medium text-sm">@{comment.username}</p>
-                        <span className="text-white/50 text-xs">{comment.timestamp}</span>
+                        <p className="text-white font-medium text-sm">@{c.username}</p>
+                        <span className="text-white/50 text-xs">{c.timestamp}</span>
                       </div>
-                      <p className="text-white/90 text-sm mt-1">{comment.text}</p>
+                      <p className="text-white/90 text-sm mt-1">{c.text}</p>
                     </div>
                   </div>
                 ))}
+                {realComments.length === 0 && !commentsLoading && (
+                  <p className="text-white/50 text-sm text-center py-4">Be the first to comment</p>
+                )}
               </div>
             </ScrollArea>
             

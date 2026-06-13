@@ -59,7 +59,7 @@ export default function LandingPage() {
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               The ultimate social media platform for content creators. Share 3-5 minute videos, 
-              host live radio shows, stream interactive content, and monetize your creativity.
+              host live radio shows, stream interactive content, and monetize your creativity. Silicon serves carbon.
             </p>
           </div>
           

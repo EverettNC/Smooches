@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageSquare, Share, Users } from "lucide-react";
+import { Heart, MessageSquare, Share, Users, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface LiveStreamViewerProps {
   streamId: string;
@@ -17,7 +18,14 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
   const [isLoading, setIsLoading] = useState(true);
   const [viewerCount, setViewerCount] = useState(0);
   const [heartCount, setHeartCount] = useState(0);
+  const [showGiftPanel, setShowGiftPanel] = useState(false);
   const { toast } = useToast();
+
+  const giftOptions = [
+    { id: 1, name: "Rose", icon: "🌹", price: 5 },
+    { id: 2, name: "Crown", icon: "👑", price: 20 },
+    { id: 3, name: "Diamond", icon: "💎", price: 50 }
+  ];
   
   // Initialize WebSocket connection
   useEffect(() => {
@@ -65,6 +73,21 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
           setTimeout(() => {
             heartsContainer.removeChild(heart);
           }, 2000);
+        }
+      } else if (message.type === "gift") {
+        const heartsContainer = document.getElementById("hearts-container");
+        if (heartsContainer) {
+          const g = document.createElement("div");
+          g.textContent = message.icon || "🎁";
+          g.className = "absolute text-3xl";
+          g.style.bottom = "60px";
+          g.style.left = `${Math.random() * 80 + 10}%`;
+          g.style.zIndex = "20";
+          heartsContainer.appendChild(g);
+          
+          setTimeout(() => {
+            if (g.parentNode) g.parentNode.removeChild(g);
+          }, 3000);
         }
       }
     };
@@ -176,6 +199,28 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
       }, 2000);
     }
   };
+
+  const sendGift = async (giftId: number) => {
+    const giftOption = giftOptions.find(g => g.id === giftId);
+    if (!giftOption) return;
+    try {
+      await apiRequest('POST', '/api/transactions', {
+        amount: String(giftOption.price),
+        type: 'gift',
+        status: 'completed'
+      });
+      toast({ title: "Gift sent!", description: `$${giftOption.price} — 85% to creator` });
+    } catch {}
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: "gift",
+        streamId,
+        icon: giftOption.icon,
+        amount: giftOption.price
+      }));
+    }
+    setShowGiftPanel(false);
+  };
   
   // Make live streams more interactive by using actual pre-recorded video
   // for the demo in case WebRTC isn't working on the platform
@@ -248,6 +293,16 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
               <span>{heartCount}</span>
             </Button>
             
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowGiftPanel(!showGiftPanel)}
+              className="flex items-center gap-1"
+            >
+              <Gift className="w-5 h-5" />
+              <span>Gift</span>
+            </Button>
+            
             <Button
               variant="ghost"
               size="sm"
@@ -274,6 +329,17 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
               <span>Share</span>
             </Button>
           </div>
+
+          {showGiftPanel && (
+            <div className="mt-3 p-2 bg-black/60 rounded grid grid-cols-3 gap-2">
+              {giftOptions.map(g => (
+                <Button key={g.id} variant="outline" size="sm" className="flex flex-col h-auto py-1 text-xs border-white/30" onClick={() => sendGift(g.id)}>
+                  <span className="text-lg">{g.icon}</span>
+                  <span>${g.price}</span>
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       </Card>
     </div>

@@ -129,6 +129,15 @@ export function VideoFeed() {
             <VideoPlayer 
               video={video} 
               autoPlay={index === currentIndex} 
+              onEnded={() => {
+                if (index < videos.length - 1) {
+                  const next = index + 1;
+                  if (containerRef.current) {
+                    containerRef.current.scrollTo({ top: next * containerRef.current.clientHeight, behavior: 'smooth' });
+                  }
+                  setCurrentIndex(next);
+                }
+              }}
             />
           </div>
         ))}

@@ -312,7 +312,7 @@ Resources:
       Protocol: HTTP
       VpcId: !Ref VPC
       TargetType: ip
-      HealthCheckPath: /api/health
+      HealthCheckPath: /smooches/health
       HealthCheckProtocol: HTTP
       HealthCheckIntervalSeconds: 30
       HealthCheckTimeoutSeconds: 5

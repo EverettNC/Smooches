@@ -83,6 +83,7 @@ export interface IStorage {
   // Transactions
   getTransactions(userId: number): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getGiftsReceived(creatorId: number): Promise<Transaction[]>;
 
   // Subscriptions
   getSubscriptions(userId: number): Promise<Subscription[]>;
@@ -369,6 +370,13 @@ export class DatabaseStorage implements IStorage {
       .values(transaction)
       .returning();
     return newTransaction;
+  }
+
+  async getGiftsReceived(creatorId: number): Promise<Transaction[]> {
+    return await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.targetUserId, creatorId));
   }
 
   async getSubscriptions(userId: number): Promise<Subscription[]> {

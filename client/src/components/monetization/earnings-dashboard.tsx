@@ -20,7 +20,7 @@ export function EarningsDashboard() {
   const isLoading = earningsLoading || txLoading || subLoading;
 
   const totalEarnings = earnings.reduce((sum, e) => sum + parseFloat(e.amount as any || '0'), 0);
-  const totalTips = transactions.filter(t => t.type === 'gift').reduce((sum, t) => sum + parseFloat(t.amount as any || '0'), 0);
+  const totalTips = earnings.filter((e: any) => e.type === 'tip' || e.type === 'gift').reduce((sum, e: any) => sum + parseFloat(e.amount as any || '0'), 0);
 
   if (isLoading) {
     return (

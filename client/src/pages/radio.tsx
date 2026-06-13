@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { RadioPlayer } from "@/components/radio-player";
 import { RadioScheduler } from "@/components/radio/radio-scheduler";
+import { ClipGenerator } from "@/components/clip-generator";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarPlus, Radio as RadioIcon, Plus, Upload, Mic } from "lucide-react";
+import { CalendarPlus, Radio as RadioIcon, Plus, Upload, Mic, Scissors } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-simple";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -20,6 +21,8 @@ export default function Radio() {
   const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [isCreateStationOpen, setIsCreateStationOpen] = useState(false);
+  const [isClipOpen, setIsClipOpen] = useState(false);
+  const [clipStation, setClipStation] = useState<any>(null);
   const [scheduleForm, setScheduleForm] = useState({ title: "", date: "", startTime: "", duration: "60", description: "" });
   const [stationForm, setStationForm] = useState({ name: "", description: "", streamUrl: "" });
   const { user } = useAuth();
@@ -261,15 +264,26 @@ export default function Radio() {
                       </div>
                     </div>
                     <RadioPlayer station={station} />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-3"
-                      onClick={() => { setSelectedStationId(station.id); setIsSchedulerOpen(true); }}
-                    >
-                      <CalendarPlus className="h-4 w-4 mr-2" />
-                      Schedule Show
-                    </Button>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => { setSelectedStationId(station.id); setIsSchedulerOpen(true); }}
+                      >
+                        <CalendarPlus className="h-4 w-4 mr-2" />
+                        Schedule
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => { setClipStation(station); setIsClipOpen(true); }}
+                      >
+                        <Scissors className="h-4 w-4 mr-2" />
+                        Clip
+                      </Button>
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -325,6 +339,23 @@ export default function Radio() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={isClipOpen} onOpenChange={setIsClipOpen}>
+          <DialogContent className="max-w-5xl">
+            <DialogHeader>
+              <DialogTitle>Quick Preview Clips • {clipStation?.name}</DialogTitle>
+            </DialogHeader>
+            {clipStation && user && (
+              <ClipGenerator 
+                audioUrl={clipStation.streamUrl || '/short-audio.mp3'} 
+                showName={clipStation.name} 
+                stationId={clipStation.id} 
+                userId={user.id} 
+                onClipGenerated={() => { /* optional refresh */ }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );

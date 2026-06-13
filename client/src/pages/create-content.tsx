@@ -40,7 +40,7 @@ export default function CreateContentPage() {
 
   const createVideoMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await fetch("/api/videos", {
+      const response = await fetch("/smooches/video", {
         method: "POST",
         body: data,
         credentials: "include",
@@ -51,10 +51,10 @@ export default function CreateContentPage() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       toast({
-        title: "Video uploaded successfully!",
-        description: "Your content is now live on SMOOCHES",
+        title: "Content live • 85% to you",
+        description: res.trace_id ? `Dispatched (trace ${res.trace_id.slice(0,20)}...)` : "Creator-first flow complete",
       });
       setLocation("/");
     },
@@ -108,14 +108,13 @@ export default function CreateContentPage() {
       
       const duration = videoElement.duration;
 
-      // 10 seconds minimum, 420 seconds (7 minutes) maximum
-      if (duration < 10 || duration > 420) {
+      // 3-5min focus
+      if (duration < 120 || duration > 360) {
         toast({
-          title: "Invalid video length",
-          description: "Videos must be between 10 seconds and 7 minutes long.",
+          title: "Duration note",
+          description: "Best between ~3-5 minutes for the For You experience.",
           variant: "destructive",
         });
-        return;
       }
 
       // If it passes, execute the upload
@@ -152,7 +151,7 @@ export default function CreateContentPage() {
             Create Content
           </h1>
           <p className="text-muted-foreground">
-            Share your creativity with the SMOOCHES community
+            Share your creativity with the SMOOCHES community • Creator-first: you keep 85%
           </p>
         </div>
 
@@ -170,7 +169,7 @@ export default function CreateContentPage() {
               <Video className="w-8 h-8 mx-auto text-primary" />
               <div>
                 <h3 className="font-semibold">Video</h3>
-                <p className="text-sm text-muted-foreground">10 sec - 7 min videos</p>
+                <p className="text-sm text-muted-foreground">3-5 min focus • you keep 85%</p>
               </div>
               <Badge variant={contentType === "video" ? "default" : "outline"}>
                 <Clock className="w-3 h-3 mr-1" />
@@ -246,12 +245,26 @@ export default function CreateContentPage() {
                     className="file:bg-primary file:text-primary-foreground file:border-0 file:rounded-md file:px-4 file:py-2"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Videos must be between 10 seconds and 7 minutes long. Supported formats: MP4, MOV, AVI
+                    3-5 minute videos • you keep 85% • Supported: MP4, MOV, audio for radio/podcast
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="video-title">Title</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="video-title">Title</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 text-xs"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/ai/title', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ clipContent: videoData.description || videoData.title, showName: 'Smooches', duration: 240 }) });
+                          if (res.ok) { const d = await res.json(); if (d.title) setVideoData(p => ({...p, title: d.title})); }
+                        } catch {}
+                      }}
+                    >Silicon title</Button>
+                  </div>
                   <Input
                     id="video-title"
                     placeholder="Give your video a catchy title..."
@@ -264,7 +277,21 @@ export default function CreateContentPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="video-description">Description</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="video-description">Description</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 text-xs"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/ai/desc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ clipContent: videoData.description || videoData.title, showName: 'Smooches' }) });
+                          if (res.ok) { const d = await res.json(); if (d.description) setVideoData(p => ({...p, description: d.description})); }
+                        } catch {}
+                      }}
+                    >Silicon desc</Button>
+                  </div>
                   <Textarea
                     id="video-description"
                     placeholder="Tell viewers what your video is about..."

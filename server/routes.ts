@@ -2,6 +2,8 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import * as fsp from "fs/promises";
 import { storage } from "./storage";
 import { setupSimpleAuth, requireAuth, getCurrentUserId } from "./simple-auth";
 import { setupAuth } from "./auth";
@@ -22,6 +24,7 @@ import { z } from 'zod';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { generateClipTitle, generateClipDescription } from "./openai";
 
 // Multer storage config
 const videoStorage = multer.diskStorage({
@@ -149,6 +152,15 @@ export function registerRoutes(app: Express): Server {
               streamClients.get(streamId)?.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(msg)); });
             }
             break;
+          case 'gift':
+            const giftMsg = { type: 'gift', icon: message.icon || '🎁', amount: message.amount, targetId: message.targetId || streamId, timestamp: new Date().toISOString() };
+            if (streamId && streamClients.has(streamId)) {
+              streamClients.get(streamId)?.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(giftMsg)); });
+            }
+            if (reactionTarget && reactionClients.has(reactionTarget)) {
+              reactionClients.get(reactionTarget)?.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(giftMsg)); });
+            }
+            break;
         }
       } catch (e) { console.error('WS error:', e); }
     });
@@ -166,38 +178,89 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ── SMOOCHES CREATOR API (8030) ────────────────────────────────────────────
-  // Video (3-5min + radio), Live (stream+gifting), Ambassador (monetization+subs+earnings)
-  // Passport.js auth enabled. All flows creator-first: 85% revenue to creator. No exploitation.
-  // Implements exact Upward return + Integration from DISPATCH.md (trace_id + from:"smooches").
-  // Core work (detect, extract, verify, post, gift, etc.) runs BEFORE the required POST to /source/ingest.
-  // Flow is complete ONLY once the upward call succeeds.
+  // /identity, /video (3-5min+radio), /live (+gifting), /ambassador (monetization+Prime+podcast)
+  // Creator-first: 85% revenue, no exploitation. Strict upward to /source/ingest (see DISPATCH.md).
 
-  async function forwardToIngest(payload: any): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const data = JSON.stringify(payload);
-      const reqHttp = http.request({
-        hostname: '127.0.0.1',
-        port: 8000,
-        path: '/source/ingest',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
-      }, (res) => {
-        let body = '';
-        res.on('data', (c) => body += c);
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 400) {
-            return reject(new Error(`ingest ${res.statusCode}: ${body}`));
-          }
-          try { resolve(JSON.parse(body || '{}')); } catch { resolve({}); }
+  app.get("/smooches/health", (_req, res) => {
+    res.json({ status: "healthy", port: 8030, timestamp: new Date().toISOString() });
+  });
+
+  app.post("/api/ai/title", requireAuth, async (req, res) => {
+    const { clipContent = "", showName = "", duration = 60 } = req.body || {};
+    const title = await generateClipTitle(clipContent, showName, Number(duration));
+    res.json({ title });
+  });
+
+  app.post("/api/ai/desc", requireAuth, async (req, res) => {
+    const { clipContent = "", showName = "" } = req.body || {};
+    const description = await generateClipDescription(clipContent, showName);
+    res.json({ description });
+  });
+
+  app.get("/api/search", async (req, res) => {
+    const q = String(req.query.q || "").toLowerCase().trim();
+    if (!q) return res.json({ videos: [], clips: [], stations: [] });
+    const allV = await storage.getVideos();
+    const videos = allV.filter(v => (v.title || "").toLowerCase().includes(q) || (v.description || "").toLowerCase().includes(q));
+    const clips = (await storage.getClips?.() || []).filter((c: any) => (c.title || "").toLowerCase().includes(q) || (c.showName || "").toLowerCase().includes(q));
+    const stations = (await storage.getRadioStations?.() || []).filter((s: any) => (s.name || "").toLowerCase().includes(q) || (s.description || "").toLowerCase().includes(q));
+    res.json({ videos: videos.slice(0, 20), clips: clips.slice(0, 20), stations: stations.slice(0, 20) });
+  });
+
+  async function forwardToIngest(payload: any, retries = 2): Promise<any> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await new Promise((resolve, reject) => {
+          const data = JSON.stringify(payload);
+          const reqHttp = http.request({
+            hostname: '127.0.0.1',
+            port: 8000,
+            path: '/source/ingest',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+          }, (res) => {
+            let body = '';
+            res.on('data', (c) => body += c);
+            res.on('end', () => {
+              if (res.statusCode && res.statusCode >= 400) {
+                return reject(new Error(`ingest ${res.statusCode}: ${body}`));
+              }
+              try { resolve(JSON.parse(body || '{}')); } catch { resolve({}); }
+            });
+          });
+          reqHttp.on('error', (e) => { reject(e); });
+          reqHttp.write(data); reqHttp.end();
         });
-      });
-      reqHttp.on('error', (e) => { reject(e); });
-      reqHttp.write(data); reqHttp.end();
-    });
+      } catch (err) {
+        if (attempt === retries) throw err;
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
+      }
+    }
   }
 
   function makeTraceId(): string {
     return `smooches-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  // Basic S3 upload helper (uses existing @aws-sdk/client-s3). Falls back to local if no S3_BUCKET.
+  // Cleans up local temp file after S3 upload for prod hygiene.
+  const s3 = process.env.S3_BUCKET ? new S3Client({}) : null;
+  async function uploadMedia(file: any, keyPrefix: string): Promise<string> {
+    const key = `${keyPrefix}/${file.filename}`;
+    if (s3 && process.env.S3_BUCKET) {
+      const body = await fsp.readFile(file.path);
+      await s3.send(new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET,
+        Key: key,
+        Body: body,
+        ContentType: file.mimetype,
+      }));
+      // Cleanup local temp file
+      try { await fsp.unlink(file.path); } catch {}
+      return `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${key}`;
+    }
+    // Dev fallback (keep local)
+    return `/uploads/videos/${file.filename}`;
   }
 
   app.get("/smooches/identity", requireAuth, async (req, res) => {
@@ -220,8 +283,7 @@ export function registerRoutes(app: Express): Server {
     } catch (e) { res.status(500).json({ error: "Identity failed" }); }
   });
 
-  // POST /smooches/video (3-5min + radio). Handles 'video' or 'audio' field.
-  // Core work then exact upward dispatch per DISPATCH.md.
+  // POST /smooches/video (3-5min + radio) — detect/extract/verify/post then upward dispatch.
   app.post("/smooches/video", requireAuth, uploadAudio.fields([{ name: 'video', maxCount: 1 }, { name: 'audio', maxCount: 1 }]), async (req: any, res) => {
     try {
       const userId = getCurrentUserId(req)!;
@@ -231,25 +293,22 @@ export function registerRoutes(app: Express): Server {
       if (!title) return res.status(400).json({ error: "Title required" });
       if (!file && !sourceUrl) return res.status(400).json({ error: "No media file (use field video or audio)" });
 
-      // === Core work: detect, extract, verify, post (per DISPATCH.md) ===
-      const detectedType = contentType; // detect
-      const url = sourceUrl || `/uploads/videos/${file.filename}`;
-      const extractedDuration = duration ? Number(duration) : null; // extract
-      // verify (3-5min focus for video/radio; allow if unspecified)
-      if (detectedType === 'video' && extractedDuration != null) {
-        if (extractedDuration < 180 || extractedDuration > 300) {
-          console.log(`[verify] video duration ${extractedDuration}s outside 180-300s focus (still accepted)`);
-        }
+      // detect / extract / verify (3-5min focus)
+      const detectedType = contentType;
+      const url = sourceUrl || await uploadMedia(file, 'smooches');
+      const extractedDuration = duration ? Number(duration) : null;
+      if (detectedType === 'video' && extractedDuration != null && (extractedDuration < 180 || extractedDuration > 300)) {
+        console.log(`[verify] video duration ${extractedDuration}s outside 180-300s focus (still accepted)`);
       }
+
       let record: any;
       if (detectedType === 'radio') {
         record = await storage.createRadioStation({ name: title, description: description || null, streamUrl: url, coverImage: null, isActive: true, userId } as any);
       } else {
         record = await storage.createVideo({ userId, title, description: description || null, videoUrl: url, thumbnail: null, isLive: false });
       }
-      // post complete; no direct gift on plain video (gifting via reactions/transactions)
 
-      // Build exact upward payload shape from DISPATCH.md 'Integration'
+      // post complete (gifting via other paths) — build dispatch payload
       const trace_id = makeTraceId();
       const dispatch = {
         trace_id,
@@ -275,7 +334,7 @@ export function registerRoutes(app: Express): Server {
         status: "processed"
       };
 
-      const ingest = await forwardToIngest(dispatch); // flow complete only on success
+      const ingest = await forwardToIngest(dispatch); // flow complete only on success (see DISPATCH.md)
       res.status(201).json({ success: true, record, ingest, creatorRevenueShare: "85%", note: "3-5min videos + radio supported", trace_id });
     } catch (e: any) { res.status(500).json({ error: e.message || "video failed" }); }
   });
@@ -288,13 +347,10 @@ export function registerRoutes(app: Express): Server {
       const { title, description, streamKey } = req.body;
       if (!title) return res.status(400).json({ error: "title required" });
 
-      // === Core work: detect, extract, verify, post, gift (per DISPATCH.md) ===
+      // detect/extract/verify + post (gift via tx/WS)
       const detectedType = 'live';
       const liveUrl = streamKey ? `live:${streamKey}` : 'live:ws';
-      // extract + verify (live always allowed)
       const live = await storage.createVideo({ userId, title, description: description || null, videoUrl: liveUrl, thumbnail: null, isLive: true });
-      // post done; gift path: clients use POST /api/transactions (type=gift) + WS for realtime
-      // (ambassador uplift available after enrollment)
 
       const trace_id = makeTraceId();
       const dispatch = {
@@ -331,15 +387,14 @@ export function registerRoutes(app: Express): Server {
   app.post("/smooches/ambassador", requireAuth, async (req, res) => {
     try {
       const userId = getCurrentUserId(req)!;
-      const { action = 'enroll', tier = 'silver', amount = '9.99', amazonPrime = false, podcast = false, subscriptionDetails } = req.body;
+      const { action = 'enroll', tier = 'silver', amount = '9.99', amazonPrime = false, podcast = false, subscriptionDetails, referralCode } = req.body;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "no user" });
 
-      // === Core work: detect, extract, verify, post, gift (per DISPATCH.md) ===
+      // detect/extract flags + post/gift (85% enforced)
       const detectedType = 'ambassador';
       const results: any = {};
-      // detect/extract flags
-      const flags = { amazonPrime: !!amazonPrime, podcast: !!podcast, tier };
+      const flags = { amazonPrime: !!amazonPrime, podcast: !!podcast, tier, referralCode: referralCode || null };
       if (action === 'enroll') {
         const updated = await storage.updateUser(userId, { role: 'creator' });
         results.user = { ...updated, password: undefined };
@@ -349,7 +404,8 @@ export function registerRoutes(app: Express): Server {
           podcastDistribution: flags.podcast,
           creatorRevenueShare: 85,
           platformFee: 15,
-          perks: 'Priority ingest, Prime placement, podcast syndication, boosted discovery'
+          perks: 'Priority ingest, Prime placement, podcast syndication, boosted discovery',
+          referralCode: `SM-${userId.toString().padStart(4, '0')}-${Date.now().toString(36).slice(-4).toUpperCase()}`
         };
       }
       if (action === 'subscription' || subscriptionDetails) {
@@ -362,6 +418,13 @@ export function registerRoutes(app: Express): Server {
           endDate: new Date(Date.now() + 30 * 86400000),
         };
         results.subscription = await storage.createSubscription(subPayload as any);
+        // Basic referral bonus: if referred, credit small earnings to current user (demo for growth)
+        if (referralCode && amount) {
+          const bonus = (parseFloat(String(amount)) * 0.05).toFixed(2); // 5% bonus for using referral
+          const month = new Date().toISOString().slice(0, 7);
+          await storage.createEarnings({ userId, amount: bonus, type: 'referral', month } as any);
+          results.referralBonus = bonus;
+        }
       }
       if (action === 'earnings' || amount) {
         const month = new Date().toISOString().slice(0, 7);
@@ -369,7 +432,6 @@ export function registerRoutes(app: Express): Server {
         results.earnings = await storage.createEarnings({ userId, amount: creatorShare, type: 'subscription', month } as any);
         results.payoutNote = "Immediate 85% credit to earnings; Ambassador Prime/podcast bonuses extra.";
       }
-      // verify implicit via role/auth; post/gift via earnings + sub (85% creator share enforced)
 
       const trace_id = makeTraceId();
       const dispatch = {
@@ -641,7 +703,18 @@ export function registerRoutes(app: Express): Server {
       const userId = getCurrentUserId(req);
       const result = insertTransactionSchema.safeParse({ ...req.body, userId });
       if (!result.success) return res.status(400).json({ message: "Invalid transaction data" });
-      const transaction = await storage.createTransaction(result.data);
+      const bodyVideoId = req.body.videoId ? parseInt(req.body.videoId) : undefined;
+      const txData = { ...result.data, videoId: bodyVideoId, targetUserId: req.body.targetUserId ? parseInt(req.body.targetUserId) : undefined };
+      const transaction = await storage.createTransaction(txData);
+      if (result.data.type === 'gift' && bodyVideoId) {
+        const vid = await storage.getVideo(bodyVideoId);
+        if (vid && vid.userId) {
+          const amt = parseFloat(String(result.data.amount || '0'));
+          const share = (amt * 0.85).toFixed(2);
+          const month = new Date().toISOString().slice(0, 7);
+          await storage.createEarnings({ userId: vid.userId, amount: share, type: 'tip', month } as any);
+        }
+      }
       res.status(201).json(transaction);
     } catch (e) { res.status(500).json({ message: "Failed to create transaction" }); }
   });
