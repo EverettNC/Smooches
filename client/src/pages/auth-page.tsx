@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth-simple";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Radio, Video, Users } from "lucide-react";
 
 export default function AuthPage() {
@@ -18,8 +17,13 @@ export default function AuthPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
 
+  // Debug: log when activeTab changes
+  useEffect(() => {
+    console.log('activeTab changed:', activeTab);
+  }, [activeTab]);
+
   // Handle form submissions
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     try {
@@ -31,7 +35,7 @@ export default function AuthPage() {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setRegisterLoading(true);
     try {
@@ -42,8 +46,6 @@ export default function AuthPage() {
       setRegisterLoading(false);
     }
   };
-
-
 
   const [, setLocation] = useLocation();
 
@@ -59,13 +61,13 @@ export default function AuthPage() {
       <div className="flex-1 flex flex-col justify-center p-10">
         <div className="max-w-md mx-auto w-full">
           <div className="flex flex-col items-center gap-8 mb-12">
-            <img 
-              src="/smooches-logo.jpeg" 
-              alt="SMOOCHES" 
+            <img
+              src="/smooches-logo.jpeg"
+              alt="SMOOCHES"
               className="w-[3840px] h-[3840px] object-cover rounded-full animate-pulse shadow-2xl border-[40px] border-orange-700 hover:border-red-700 transition-colors"
-              style={{filter: 'saturate(3) contrast(2) brightness(1.3) hue-rotate(5deg)'}}
+              style={{ filter: 'saturate(3) contrast(2) brightness(1.3) hue-rotate(5deg)' }}
             />
-            <h1 className="text-9xl font-black bg-gradient-to-r from-orange-600 via-red-600 to-blue-700 bg-clip-text text-transparent tracking-wider drop-shadow-2xl text-center animate-bounce" style={{filter: 'saturate(2) contrast(1.5)'}}>
+            <h1 className="text-9xl font-black bg-gradient-to-r from-orange-600 via-red-600 to-blue-700 bg-clip-text text-transparent tracking-wider drop-shadow-2xl text-center animate-bounce" style={{ filter: 'saturate(2) contrast(1.5)' }}>
               SMOOCHES
             </h1>
           </div>
@@ -73,131 +75,145 @@ export default function AuthPage() {
             Your platform for interactive audio streaming and content creation
           </p>
 
-          <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-2 mb-8">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
+          {/* Custom tabs - replaces broken Radix UI Tabs */}
+          <div className="mb-8">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={activeTab === "login" ? "default" : "outline"}
+                className="w-full"
+                onClick={() => setActiveTab("login")}
+              >
+                Login
+              </Button>
+              <Button
+                variant={activeTab === "register" ? "default" : "outline"}
+                className="w-full"
+                onClick={() => setActiveTab("register")}
+              >
+                Register
+              </Button>
+            </div>
+          </div>
 
-            <TabsContent value="login">
-              <Card className="p-6">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div>
-                    <label htmlFor="username" className="block text-sm font-medium mb-1">
-                      Username
-                    </label>
-                    <Input
-                      id="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter your username"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium mb-1">
-                      Password
-                    </label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-orange-700 to-red-700 hover:from-orange-800 hover:to-red-800 text-white font-black py-4 text-xl transition-all transform hover:scale-110 shadow-xl hover:shadow-2xl border-2 border-orange-600" style={{filter: 'saturate(2) contrast(1.5) brightness(1.2)'}} disabled={loginLoading}>
-                    {loginLoading ? "Logging in..." : "🚀 LOGIN"}
-                  </Button>
-                </form>
-                
-                {/* Quick Admin Login */}
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-xs text-muted-foreground mb-2 text-center">Quick Access</p>
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-xs"
-                    onClick={async () => {
-                      setUsername("superadmin");
-                      setPassword("admin123");
-                      setLoginLoading(true);
-                      try {
-                        await login({ username: "superadmin", password: "admin123" });
-                      } catch (error) {
-                        // Error handled by mutation
-                      } finally {
-                        setLoginLoading(false);
-                      }
-                    }}
-                    disabled={loginLoading}
-                  >
-                    Admin Login
-                  </Button>
+          {activeTab === "login" && (
+            <Card className="p-6">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium mb-1">
+                    Username
+                  </label>
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your username"
+                    required
+                  />
                 </div>
-              </Card>
-            </TabsContent>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium mb-1">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full bg-gradient-to-r from-orange-700 to-red-700 hover:from-orange-800 hover:to-red-800 text-white font-black py-4 text-xl transition-all transform hover:scale-110 shadow-xl hover:shadow-2xl border-2 border-orange-600" style={{ filter: 'saturate(2) contrast(1.5) brightness(1.2)' }} disabled={loginLoading}>
+                  {loginLoading ? "Logging in..." : "🚀 LOGIN"}
+                </Button>
+              </form>
 
-            <TabsContent value="register">
-              <Card className="p-6">
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <div>
-                    <label htmlFor="displayName" className="block text-sm font-medium mb-1">
-                      Display Name
-                    </label>
-                    <Input
-                      id="displayName"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Enter your display name"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium mb-1">
-                      Email
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="reg-username" className="block text-sm font-medium mb-1">
-                      Username
-                    </label>
-                    <Input
-                      id="reg-username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Choose a username"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="reg-password" className="block text-sm font-medium mb-1">
-                      Password
-                    </label>
-                    <Input
-                      id="reg-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Choose a password"
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-700 to-purple-700 hover:from-blue-800 hover:to-purple-800 text-white font-black py-4 text-xl transition-all transform hover:scale-110 shadow-xl hover:shadow-2xl border-2 border-blue-600" style={{filter: 'saturate(2) contrast(1.5) brightness(1.2)'}} disabled={registerLoading}>
-                    {registerLoading ? "Creating account..." : "✨ CREATE ACCOUNT"}
-                  </Button>
-                </form>
-              </Card>
-            </TabsContent>
-          </Tabs>
+              {/* Quick Admin Login */}
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-xs text-muted-foreground mb-2 text-center">Quick Access</p>
+                <Button
+                  variant="outline"
+                  className="w-full text-xs"
+                  onClick={async () => {
+                    setUsername("superadmin");
+                    setPassword("admin123");
+                    setLoginLoading(true);
+                    try {
+                      await login({ username: "superadmin", password: "admin123" });
+                    } catch (error) {
+                      // Error handled by mutation
+                    } finally {
+                      setLoginLoading(false);
+                    }
+                  }}
+                  disabled={loginLoading}
+                >
+                  Admin Login
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {activeTab === "register" && (
+            <Card className="p-6">
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div>
+                  <label htmlFor="displayName" className="block text-sm font-medium mb-1">
+                    Display Name
+                  </label>
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Enter your display name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-1">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reg-username" className="block text-sm font-medium mb-1">
+                    Username
+                  </label>
+                  <Input
+                    id="reg-username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Choose a username"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reg-password" className="block text-sm font-medium mb-1">
+                    Password
+                  </label>
+                  <Input
+                    id="reg-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Choose a password"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full bg-gradient-to-r from-blue-700 to-purple-700 hover:from-blue-800 hover:to-purple-800 text-white font-black py-4 text-xl transition-all transform hover:scale-110 shadow-xl hover:shadow-2xl border-2 border-blue-600" style={{ filter: 'saturate(2) contrast(1.5) brightness(1.2)' }} disabled={registerLoading}>
+                  {registerLoading ? "Creating account..." : "✨ CREATE ACCOUNT"}
+                </Button>
+              </form>
+            </Card>
+          )}
+
         </div>
       </div>
 

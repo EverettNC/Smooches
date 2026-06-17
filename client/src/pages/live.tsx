@@ -24,7 +24,7 @@ export default function LivePage() {
 
   // Sample featured streams
   const featuredStreams = [
-    { id: "stream1", streamerName: "Kiki", viewers: 243, title: "Morning Vibes" },
+    { id: "main-live", streamerName: "Main Live", viewers: 243, title: "Live from the Studio" },
     { id: "stream2", streamerName: "Lash", viewers: 187, title: "Music Session" },
     { id: "stream3", streamerName: "Big Tank", viewers: 56, title: "Late Night Chat" },
   ];
@@ -185,7 +185,7 @@ export default function LivePage() {
             </p>
           </div>
           
-          <LiveStreamBroadcaster />
+          <LiveStreamBroadcaster streamId="main-live" />
           
           <div className="mt-8">
             <h3 className="font-bold mb-2">Streaming Guidelines</h3>

@@ -14,6 +14,7 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const viewerIdRef = useRef<string>(`viewer-${Date.now()}-${Math.floor(Math.random() * 10000)}`);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [viewerCount, setViewerCount] = useState(0);
@@ -42,14 +43,23 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
       ws.send(JSON.stringify({
         type: "viewer-join",
         streamId,
-        viewerId: "viewer-" + Math.floor(Math.random() * 10000),
+        viewerId: viewerIdRef.current,
       }));
     };
     
     ws.onmessage = async (event) => {
       const message = JSON.parse(event.data);
       
-      if (message.type === "offer") {
+      if (message.type === "broadcaster-ready") {
+        // re-join so broadcaster gets viewer-connected
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: "viewer-join",
+            streamId,
+            viewerId: viewerIdRef.current,
+          }));
+        }
+      } else if (message.type === "offer") {
         handleOffer(message.offer);
       } else if (message.type === "ice-candidate") {
         handleIceCandidate(message.candidate);
@@ -141,6 +151,7 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
           type: "ice-candidate",
           candidate: event.candidate,
           streamId,
+          viewerId: viewerIdRef.current,
         }));
       }
     };
@@ -153,6 +164,7 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
       type: "answer",
       answer: peerConnection.localDescription,
       streamId,
+      viewerId: viewerIdRef.current,
     }));
     
     peerConnectionRef.current = peerConnection;

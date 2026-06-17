@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Mic, MicOff, Video, VideoOff, Share, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export function LiveStreamBroadcaster() {
+export function LiveStreamBroadcaster({ streamId = "main-live" }: { streamId?: string }) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -52,6 +52,7 @@ export function LiveStreamBroadcaster() {
           ws.send(JSON.stringify({
             type: "offer",
             offer: peerConnection.localDescription,
+            streamId,
             viewerId: message.viewerId,
           }));
           
@@ -125,6 +126,7 @@ export function LiveStreamBroadcaster() {
         wsRef.current?.send(JSON.stringify({
           type: "ice-candidate",
           candidate: event.candidate,
+          streamId,
           viewerId,
         }));
       }
@@ -154,7 +156,7 @@ export function LiveStreamBroadcaster() {
       // Announce broadcaster is ready
       wsRef.current?.send(JSON.stringify({
         type: "broadcaster-ready",
-        broadcasterId: "user-" + Math.floor(Math.random() * 10000),
+        streamId,
       }));
       
       setIsStreaming(true);
@@ -186,7 +188,8 @@ export function LiveStreamBroadcaster() {
     
     // Announce broadcaster is stopping
     wsRef.current?.send(JSON.stringify({
-      type: "broadcaster-stopped"
+      type: "broadcaster-stopped",
+      streamId,
     }));
     
     setIsStreaming(false);

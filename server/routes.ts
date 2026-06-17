@@ -5,8 +5,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import * as fsp from "fs/promises";
 import { storage } from "./storage";
-import { setupSimpleAuth, requireAuth, getCurrentUserId } from "./simple-auth";
-import { setupAuth } from "./auth";
+import { setupSimpleAuth } from "./simple-auth";
+import { isAuthenticated } from "./auth";
 import {
   insertVideoSchema,
   insertCommentSchema,
@@ -88,6 +88,10 @@ const uploadAudio = multer({
 const streamClients = new Map<number, Set<WebSocket>>();
 const reactionClients = new Map<string, Set<WebSocket>>();
 
+// WebRTC signaling tracking for live streaming
+const broadcasterClients = new Map<string, WebSocket>(); // streamId -> broadcaster WS
+const viewerPeerConnections = new Map<string, Map<string, WebSocket>>(); // streamId -> (viewerId -> viewer WS)
+
 const clipRequestSchema = z.object({
   audioUrl: z.string().url(),
   startTime: z.number(),
@@ -112,9 +116,30 @@ export function registerRoutes(app: Express): Server {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
   });
 
-  // Passport.js + simple session auth for full stack compatibility
-  setupAuth(app);
-  setupSimpleAuth(app);
+  // Unified auth middleware - checks both passport and simple-auth sessions
+function requireAuthUnified(req: Request, res: Response, next: any) {
+  // Check passport session first
+  if (isAuthenticated(req)) {
+    return next();
+  }
+  // Fall back to simple-auth session
+  if (req.session.userId) {
+    return next();
+  }
+  return res.status(401).json({ error: "Authentication required" });
+}
+
+function getCurrentUserIdUnified(req: Request): number | undefined {
+  // Check passport session first
+  if (isAuthenticated(req)) {
+    return req.user.id;
+  }
+  // Fall back to simple-auth session
+  return req.session.userId;
+}
+
+// Register simple-auth routes (login, register, logout, /api/auth/user)
+setupSimpleAuth(app);
 
   const httpServer = createServer(app);
 
@@ -161,6 +186,141 @@ export function registerRoutes(app: Express): Server {
               reactionClients.get(reactionTarget)?.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(JSON.stringify(giftMsg)); });
             }
             break;
+
+          // WebRTC signaling for live streaming
+          case 'broadcaster-ready':
+            if (message.streamId) {
+              broadcasterClients.set(message.streamId, ws);
+              // Notify any waiting viewers that broadcaster is ready
+              const viewers = viewerPeerConnections.get(message.streamId);
+              if (viewers) {
+                viewers.forEach((viewerWs, viewerId) => {
+                  if (viewerWs.readyState === WebSocket.OPEN) {
+                    viewerWs.send(JSON.stringify({ type: 'broadcaster-ready', streamId: message.streamId }));
+                  }
+                  // Also notify broadcaster about each waiting viewer
+                  ws.send(JSON.stringify({ 
+                    type: 'viewer-connected', 
+                    viewerId,
+                    streamId: message.streamId 
+                  }));
+                });
+              }
+            }
+            break;
+          case 'broadcaster-stopped':
+            if (message.streamId) {
+              broadcasterClients.delete(message.streamId);
+              // Notify all viewers the stream ended
+              const viewers = viewerPeerConnections.get(message.streamId);
+              if (viewers) {
+                viewers.forEach((viewerWs) => {
+                  if (viewerWs.readyState === WebSocket.OPEN) {
+                    viewerWs.send(JSON.stringify({ type: 'stream-ended', streamId: message.streamId }));
+                  }
+                });
+                viewerPeerConnections.delete(message.streamId);
+              }
+            }
+            break;
+          case 'viewer-join':
+            if (message.streamId && message.viewerId) {
+              // Register viewer
+              if (!viewerPeerConnections.has(message.streamId)) {
+                viewerPeerConnections.set(message.streamId, new Map());
+              }
+              viewerPeerConnections.get(message.streamId)!.set(message.viewerId, ws);
+              
+              // If broadcaster is already ready, notify viewer
+              const broadcasterWs = broadcasterClients.get(message.streamId);
+              if (broadcasterWs && broadcasterWs.readyState === WebSocket.OPEN) {
+                broadcasterWs.send(JSON.stringify({ 
+                  type: 'viewer-connected', 
+                  viewerId: message.viewerId,
+                  streamId: message.streamId 
+                }));
+              }
+            }
+            break;
+          case 'offer':
+            // Relay offer from broadcaster to specific viewer
+            if (message.streamId && message.viewerId && message.offer) {
+              const viewers = viewerPeerConnections.get(message.streamId);
+              if (viewers) {
+                const viewerWs = viewers.get(message.viewerId);
+                if (viewerWs && viewerWs.readyState === WebSocket.OPEN) {
+                  viewerWs.send(JSON.stringify({ 
+                    type: 'offer', 
+                    offer: message.offer,
+                    streamId: message.streamId 
+                  }));
+                }
+              }
+            }
+            break;
+          case 'answer':
+            // Relay answer from viewer to broadcaster
+            if (message.streamId && message.viewerId && message.answer) {
+              const broadcasterWs = broadcasterClients.get(message.streamId);
+              if (broadcasterWs && broadcasterWs.readyState === WebSocket.OPEN) {
+                broadcasterWs.send(JSON.stringify({ 
+                  type: 'answer', 
+                  answer: message.answer,
+                  streamId: message.streamId,
+                  viewerId: message.viewerId
+                }));
+              }
+            }
+            break;
+          case 'ice-candidate':
+            // Relay ICE candidate. Distinguish direction by whether sender is the registered broadcaster.
+            if (message.streamId && message.candidate) {
+              const bcWs = broadcasterClients.get(message.streamId);
+              const isFromBroadcaster = bcWs === ws;
+              if (isFromBroadcaster && message.viewerId) {
+                // Broadcaster -> specific viewer
+                const viewers = viewerPeerConnections.get(message.streamId);
+                if (viewers) {
+                  const viewerWs = viewers.get(message.viewerId);
+                  if (viewerWs && viewerWs.readyState === WebSocket.OPEN) {
+                    viewerWs.send(JSON.stringify({ 
+                      type: 'ice-candidate', 
+                      candidate: message.candidate,
+                      streamId: message.streamId
+                    }));
+                  }
+                }
+              } else if (message.viewerId) {
+                // Viewer -> broadcaster
+                if (bcWs && bcWs.readyState === WebSocket.OPEN) {
+                  bcWs.send(JSON.stringify({ 
+                    type: 'ice-candidate', 
+                    candidate: message.candidate,
+                    streamId: message.streamId,
+                    viewerId: message.viewerId
+                  }));
+                }
+              }
+            }
+            break;
+          case 'heart':
+            // Broadcast heart to all viewers of the stream
+            if (message.streamId) {
+              const viewers = viewerPeerConnections.get(message.streamId);
+              if (viewers) {
+                const heartMsg = { 
+                  type: 'heart', 
+                  streamId: message.streamId,
+                  timestamp: new Date().toISOString() 
+                };
+                viewers.forEach((viewerWs) => {
+                  if (viewerWs.readyState === WebSocket.OPEN) {
+                    viewerWs.send(JSON.stringify(heartMsg));
+                  }
+                });
+              }
+            }
+            break;
         }
       } catch (e) { console.error('WS error:', e); }
     });
@@ -174,6 +334,37 @@ export function registerRoutes(app: Express): Server {
         reactionClients.get(reactionTarget)?.delete(ws);
         if (reactionClients.get(reactionTarget)?.size === 0) reactionClients.delete(reactionTarget);
       }
+      // Clean up WebRTC tracking
+      // broadcaster?
+      for (const [sid, bws] of broadcasterClients.entries()) {
+        if (bws === ws) {
+          broadcasterClients.delete(sid);
+          const viewers = viewerPeerConnections.get(sid);
+          if (viewers) {
+            viewers.forEach((viewerWs) => {
+              if (viewerWs.readyState === WebSocket.OPEN) {
+                viewerWs.send(JSON.stringify({ type: 'stream-ended', streamId: sid }));
+              }
+            });
+            viewerPeerConnections.delete(sid);
+          }
+          break;
+        }
+      }
+      // viewer?
+      for (const [sid, viewers] of viewerPeerConnections.entries()) {
+        for (const [vid, vws] of viewers.entries()) {
+          if (vws === ws) {
+            viewers.delete(vid);
+            const bc = broadcasterClients.get(sid);
+            if (bc && bc.readyState === WebSocket.OPEN) {
+              bc.send(JSON.stringify({ type: 'viewer-disconnected', viewerId: vid, streamId: sid }));
+            }
+            if (viewers.size === 0) viewerPeerConnections.delete(sid);
+            break;
+          }
+        }
+      }
     });
   });
 
@@ -185,13 +376,13 @@ export function registerRoutes(app: Express): Server {
     res.json({ status: "healthy", port: 8030, timestamp: new Date().toISOString() });
   });
 
-  app.post("/api/ai/title", requireAuth, async (req, res) => {
+  app.post("/api/ai/title", requireAuthUnified, async (req, res) => {
     const { clipContent = "", showName = "", duration = 60 } = req.body || {};
     const title = await generateClipTitle(clipContent, showName, Number(duration));
     res.json({ title });
   });
 
-  app.post("/api/ai/desc", requireAuth, async (req, res) => {
+  app.post("/api/ai/desc", requireAuthUnified, async (req, res) => {
     const { clipContent = "", showName = "" } = req.body || {};
     const description = await generateClipDescription(clipContent, showName);
     res.json({ description });
@@ -263,9 +454,9 @@ export function registerRoutes(app: Express): Server {
     return `/uploads/videos/${file.filename}`;
   }
 
-  app.get("/smooches/identity", requireAuth, async (req, res) => {
+  app.get("/smooches/identity", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "User not found" });
@@ -284,9 +475,9 @@ export function registerRoutes(app: Express): Server {
   });
 
   // POST /smooches/video (3-5min + radio) — detect/extract/verify/post then upward dispatch.
-  app.post("/smooches/video", requireAuth, uploadAudio.fields([{ name: 'video', maxCount: 1 }, { name: 'audio', maxCount: 1 }]), async (req: any, res) => {
+  app.post("/smooches/video", requireAuthUnified, uploadAudio.fields([{ name: 'video', maxCount: 1 }, { name: 'audio', maxCount: 1 }]), async (req: any, res) => {
     try {
-      const userId = getCurrentUserId(req)!;
+      const userId = getCurrentUserIdUnified(req)!;
       const files = req.files || {};
       const file = (files.video && files.video[0]) || (files.audio && files.audio[0]);
       const { title, description, contentType = (files.audio ? 'radio' : 'video'), duration, sourceUrl } = req.body;
@@ -341,9 +532,9 @@ export function registerRoutes(app: Express): Server {
 
   // Live streaming + gifting entrypoint. Creates live marker, enables gifting via existing tx.
   // Core work then exact upward dispatch per DISPATCH.md.
-  app.post("/smooches/live", requireAuth, async (req, res) => {
+  app.post("/smooches/live", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req)!;
+      const userId = getCurrentUserIdUnified(req)!;
       const { title, description, streamKey } = req.body;
       if (!title) return res.status(400).json({ error: "title required" });
 
@@ -384,9 +575,9 @@ export function registerRoutes(app: Express): Server {
   // Ambassador Program flow: enroll, subscriptions, earnings. Amazon Prime + podcast integration flags.
   // Enforces creator-friendly economics (85%+ to creator), transparent.
   // Core work then exact upward dispatch per DISPATCH.md.
-  app.post("/smooches/ambassador", requireAuth, async (req, res) => {
+  app.post("/smooches/ambassador", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req)!;
+      const userId = getCurrentUserIdUnified(req)!;
       const { action = 'enroll', tier = 'silver', amount = '9.99', amazonPrime = false, podcast = false, subscriptionDetails, referralCode } = req.body;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "no user" });
@@ -476,7 +667,7 @@ export function registerRoutes(app: Express): Server {
   app.patch("/api/users/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const currentUserId = getCurrentUserId(req);
+      const currentUserId = getCurrentUserIdUnified(req);
       if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
       const { displayName, bio, location, website, avatar } = req.body;
       if (!displayName) return res.status(400).json({ message: "Display name is required" });
@@ -487,10 +678,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Upload avatar as file
-  app.post("/api/users/:id/avatar", requireAuth, uploadAvatar.single('avatar'), async (req: any, res) => {
+  app.post("/api/users/:id/avatar", requireAuthUnified, uploadAvatar.single('avatar'), async (req: any, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const currentUserId = getCurrentUserId(req);
+      const currentUserId = getCurrentUserIdUnified(req);
       if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const avatarUrl = `/uploads/avatars/${req.file.filename}`;
@@ -501,10 +692,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Settings (stored client-side, but route must exist)
-  app.patch("/api/users/:id/settings", requireAuth, async (req, res) => {
+  app.patch("/api/users/:id/settings", requireAuthUnified, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const currentUserId = getCurrentUserId(req);
+      const currentUserId = getCurrentUserIdUnified(req);
       if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
       // Settings are client-side preferences; acknowledge save
       res.json({ success: true, settings: req.body });
@@ -512,10 +703,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Upgrade role to creator
-  app.post("/api/users/:id/upgrade", requireAuth, async (req, res) => {
+  app.post("/api/users/:id/upgrade", requireAuthUnified, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const currentUserId = getCurrentUserId(req);
+      const currentUserId = getCurrentUserIdUnified(req);
       if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
       const updated = await storage.updateUser(userId, { role: "creator" });
       const { password, ...safe } = updated;
@@ -559,9 +750,9 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Upload video with file
-  app.post("/api/videos", requireAuth, uploadVideo.single('video'), async (req: any, res) => {
+  app.post("/api/videos", requireAuthUnified, uploadVideo.single('video'), async (req: any, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
       if (!req.file) return res.status(400).json({ message: "No video file uploaded" });
@@ -587,7 +778,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Like a video (toggle)
-  app.post("/api/videos/:id/like", requireAuth, async (req, res) => {
+  app.post("/api/videos/:id/like", requireAuthUnified, async (req, res) => {
     try {
       const videoId = parseInt(req.params.id);
       const video = await storage.getVideo(videoId);
@@ -606,9 +797,9 @@ export function registerRoutes(app: Express): Server {
     res.json(comments);
   });
 
-  app.post("/api/comments", requireAuth, async (req, res) => {
+  app.post("/api/comments", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       const result = insertCommentSchema.safeParse({ ...req.body, userId });
       if (!result.success) return res.status(400).json({ message: "Invalid comment data" });
       const comment = await storage.createComment(result.data);
@@ -618,9 +809,9 @@ export function registerRoutes(app: Express): Server {
 
   // ── FOLLOWS ────────────────────────────────────────────────────────────────
 
-  app.post("/api/follows", requireAuth, async (req, res) => {
+  app.post("/api/follows", requireAuthUnified, async (req, res) => {
     try {
-      const followerId = getCurrentUserId(req);
+      const followerId = getCurrentUserIdUnified(req);
       const result = insertFollowSchema.safeParse({ ...req.body, followerId });
       if (!result.success) return res.status(400).json({ message: "Invalid follow data" });
       const follow = await storage.createFollow(result.data);
@@ -628,8 +819,8 @@ export function registerRoutes(app: Express): Server {
     } catch (e) { res.status(500).json({ message: "Failed to follow" }); }
   });
 
-  app.delete("/api/follows/:followerId/:followingId", requireAuth, async (req, res) => {
-    const currentUserId = getCurrentUserId(req);
+  app.delete("/api/follows/:followerId/:followingId", requireAuthUnified, async (req, res) => {
+    const currentUserId = getCurrentUserIdUnified(req);
     const followerId = parseInt(req.params.followerId);
     if (!currentUserId || currentUserId !== followerId) return res.status(403).json({ message: "Unauthorized" });
     await storage.deleteFollow(followerId, parseInt(req.params.followingId));
@@ -649,9 +840,9 @@ export function registerRoutes(app: Express): Server {
     res.json(station);
   });
 
-  app.post("/api/radio-stations", requireAuth, async (req, res) => {
+  app.post("/api/radio-stations", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       const result = insertRadioStationSchema.safeParse({ ...req.body, userId });
       if (!result.success) return res.status(400).json({ message: "Invalid station data", errors: result.error.flatten() });
       const station = await storage.createRadioStation(result.data);
@@ -670,7 +861,7 @@ export function registerRoutes(app: Express): Server {
     res.json(show);
   });
 
-  app.post("/api/radio-schedules", requireAuth, async (req, res) => {
+  app.post("/api/radio-schedules", requireAuthUnified, async (req, res) => {
     try {
       const result = insertRadioScheduleSchema.safeParse(req.body);
       if (!result.success) return res.status(400).json({ message: "Invalid schedule data" });
@@ -681,9 +872,9 @@ export function registerRoutes(app: Express): Server {
 
   // ── REACTIONS ──────────────────────────────────────────────────────────────
 
-  app.post("/api/reactions", requireAuth, async (req, res) => {
+  app.post("/api/reactions", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       const result = insertReactionSchema.safeParse({ ...req.body, userId });
       if (!result.success) return res.status(400).json({ message: "Invalid reaction data" });
       const reaction = await storage.createReaction(result.data);
@@ -698,9 +889,9 @@ export function registerRoutes(app: Express): Server {
 
   // ── TRANSACTIONS ───────────────────────────────────────────────────────────
 
-  app.post("/api/transactions", requireAuth, async (req, res) => {
+  app.post("/api/transactions", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       const result = insertTransactionSchema.safeParse({ ...req.body, userId });
       if (!result.success) return res.status(400).json({ message: "Invalid transaction data" });
       const bodyVideoId = req.body.videoId ? parseInt(req.body.videoId) : undefined;
@@ -719,9 +910,9 @@ export function registerRoutes(app: Express): Server {
     } catch (e) { res.status(500).json({ message: "Failed to create transaction" }); }
   });
 
-  app.get("/api/transactions", requireAuth, async (req, res) => {
+  app.get("/api/transactions", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req)!;
+      const userId = getCurrentUserIdUnified(req)!;
       const transactions = await storage.getTransactions(userId);
       res.json(transactions);
     } catch (e) { res.status(500).json({ message: "Failed to fetch transactions" }); }
@@ -729,9 +920,9 @@ export function registerRoutes(app: Express): Server {
 
   // ── SUBSCRIPTIONS ──────────────────────────────────────────────────────────
 
-  app.post("/api/subscriptions", requireAuth, async (req, res) => {
+  app.post("/api/subscriptions", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       const result = insertSubscriptionSchema.safeParse({ ...req.body, userId });
       if (!result.success) return res.status(400).json({ message: "Invalid subscription data" });
       const subscription = await storage.createSubscription(result.data);
@@ -739,17 +930,17 @@ export function registerRoutes(app: Express): Server {
     } catch (e) { res.status(500).json({ message: "Failed to create subscription" }); }
   });
 
-  app.get("/api/subscriptions", requireAuth, async (req, res) => {
+  app.get("/api/subscriptions", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req)!;
+      const userId = getCurrentUserIdUnified(req)!;
       const subscriptions = await storage.getSubscriptions(userId);
       res.json(subscriptions);
     } catch (e) { res.status(500).json({ message: "Failed to fetch subscriptions" }); }
   });
 
-  app.get("/api/subscriptions/subscribers", requireAuth, async (req, res) => {
+  app.get("/api/subscriptions/subscribers", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req)!;
+      const userId = getCurrentUserIdUnified(req)!;
       const subscribers = await storage.getSubscribers(userId);
       res.json(subscribers);
     } catch (e) { res.status(500).json({ message: "Failed to fetch subscribers" }); }
@@ -757,17 +948,17 @@ export function registerRoutes(app: Express): Server {
 
   // ── EARNINGS ───────────────────────────────────────────────────────────────
 
-  app.get("/api/earnings", requireAuth, async (req, res) => {
+  app.get("/api/earnings", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req)!;
+      const userId = getCurrentUserIdUnified(req)!;
       const earnings = await storage.getEarnings(userId);
       res.json(earnings);
     } catch (e) { res.status(500).json({ message: "Failed to fetch earnings" }); }
   });
 
-  app.post("/api/earnings", requireAuth, async (req, res) => {
+  app.post("/api/earnings", requireAuthUnified, async (req, res) => {
     try {
-      const userId = getCurrentUserId(req);
+      const userId = getCurrentUserIdUnified(req);
       const result = insertEarningsSchema.safeParse({ ...req.body, userId });
       if (!result.success) return res.status(400).json({ message: "Invalid earnings data" });
       const earnings = await storage.createEarnings(result.data);
@@ -793,7 +984,7 @@ export function registerRoutes(app: Express): Server {
     res.json(clips);
   });
 
-  app.post("/api/clips", requireAuth, async (req, res) => {
+  app.post("/api/clips", requireAuthUnified, async (req, res) => {
     try {
       const result = insertClipSchema.safeParse(req.body);
       if (!result.success) return res.status(400).json({ message: "Invalid clip data" });
@@ -802,7 +993,7 @@ export function registerRoutes(app: Express): Server {
     } catch (e) { res.status(500).json({ message: "Failed to create clip" }); }
   });
 
-  app.post("/api/clips/generate", requireAuth, async (req, res) => {
+  app.post("/api/clips/generate", requireAuthUnified, async (req, res) => {
     const result = clipRequestSchema.safeParse(req.body);
     if (!result.success) return res.status(400).json({ message: "Invalid clip data" });
 

@@ -49,6 +49,7 @@
     "@types/passport-facebook": "^3.0.3",
     "@types/passport-google-oauth20": "^2.0.16",
     "bcrypt": "^5.1.1",
+    "build": "^0.1.4",
     "canvas": "^3.1.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

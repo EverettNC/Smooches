@@ -1,0 +1,20 @@
+Claude, please fully handle branding & visual identity for the Smooches social app (live video, radio, clips, creators).
+
+**Immediate action:** Read the file `BRANDING.md` (in the project root) completely — it now includes the official brand colors from `/Users/EverettN/Downloads/Christman AI Project — Brand Colors.pdf` ("Goth Punk" brass on near-black). It contains the full vision, current state audit, exact steps, success criteria, and files to touch.
+
+Use the exact colors/vars from the PDF (brass #C9A24B primary, bg #06100F, ink #EAE6D8, teal #2DE1DC, kill green #00E676, etc.). Map the red lips logo as a bold signal accent against the dark brass base.
+
+Follow the instructions in BRANDING.md step by step:
+- Read the listed source files first.
+- Clean up logo treatment (use the great lips graphic in public/smooches-logo.jpeg cleanly — no crazy filters).
+- Unify colors to the warm copper/gold/red-dark system (theme + index.css copper utilities).
+- Fix Header nav consistency.
+- Update meta/favicon.
+- Audit/replace hard-coded off-brand colors (especially blues/purples in auth and random hexes).
+- Make the whole UI feel cohesive, bold, playful, and "Smooches".
+
+Use read_file before every edit. Prefer search_replace. Keep it minimal and high-quality. Run tsc/check at end.
+
+When finished, summarize the changes you made and what the app feels like now.
+
+Start now by reading BRANDING.md + the source files it lists. Let's make Smooches look amazing.
