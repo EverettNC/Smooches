@@ -6,7 +6,6 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import * as fsp from "fs/promises";
 import { storage } from "./storage";
 import { setupSimpleAuth } from "./simple-auth";
-import { isAuthenticated } from "./auth";
 import {
   insertVideoSchema,
   insertCommentSchema,
@@ -51,8 +50,13 @@ const uploadVideo = multer({
   storage: videoStorage,
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('video/')) cb(null, true);
-    else cb(new Error('Only video files allowed'));
+    // Allow testing with any mimetype in dev, real check in production
+    if (process.env.NODE_ENV === 'production') {
+      if (file.mimetype.startsWith('video/')) cb(null, true);
+      else cb(new Error('Only video files allowed'));
+    } else {
+      cb(null, true); // Allow any file in development for testing
+    }
   }
 });
 
@@ -79,8 +83,13 @@ const uploadAudio = multer({
   storage: audioStorage,
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/')) cb(null, true);
-    else cb(new Error('Only audio/video files allowed for radio/video'));
+    // Allow testing with any mimetype in dev, real check in production
+    if (process.env.NODE_ENV === 'production') {
+      if (file.mimetype.startsWith('audio/') || file.mimetype.startsWith('video/')) cb(null, true);
+      else cb(new Error('Only audio/video files allowed for radio/video'));
+    } else {
+      cb(null, true); // Allow any file in development for testing
+    }
   }
 });
 
@@ -116,13 +125,8 @@ export function registerRoutes(app: Express): Server {
     res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
   });
 
-  // Unified auth middleware - checks both passport and simple-auth sessions
+  // Unified auth middleware - checks simple-auth sessions only
 function requireAuthUnified(req: Request, res: Response, next: any) {
-  // Check passport session first
-  if (isAuthenticated(req)) {
-    return next();
-  }
-  // Fall back to simple-auth session
   if (req.session.userId) {
     return next();
   }
@@ -130,11 +134,6 @@ function requireAuthUnified(req: Request, res: Response, next: any) {
 }
 
 function getCurrentUserIdUnified(req: Request): number | undefined {
-  // Check passport session first
-  if (isAuthenticated(req)) {
-    return req.user.id;
-  }
-  // Fall back to simple-auth session
   return req.session.userId;
 }
 
@@ -433,9 +432,9 @@ setupSimpleAuth(app);
     return `smooches-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
-  // Basic S3 upload helper (uses existing @aws-sdk/client-s3). Falls back to local if no S3_BUCKET.
+  // Basic S3 upload helper (uses existing @aws-sdk/client-s3). Falls back to local if no S3_BUCKET or invalid.
   // Cleans up local temp file after S3 upload for prod hygiene.
-  const s3 = process.env.S3_BUCKET ? new S3Client({}) : null;
+  const s3 = (process.env.S3_BUCKET && !process.env.S3_BUCKET.startsWith('arn:')) ? new S3Client({}) : null;
   async function uploadMedia(file: any, keyPrefix: string): Promise<string> {
     const key = `${keyPrefix}/${file.filename}`;
     if (s3 && process.env.S3_BUCKET) {
