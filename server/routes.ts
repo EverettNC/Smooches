@@ -438,19 +438,20 @@ setupSimpleAuth(app);
   async function uploadMedia(file: any, keyPrefix: string): Promise<string> {
     const key = `${keyPrefix}/${file.filename}`;
     if (s3 && process.env.S3_BUCKET) {
-      const body = await fsp.readFile(file.path);
+      // Streamed, so a large video never has to fit in the server's memory.
       await s3.send(new PutObjectCommand({
         Bucket: process.env.S3_BUCKET,
         Key: key,
-        Body: body,
+        Body: fs.createReadStream(file.path),
+        ContentLength: file.size,
         ContentType: file.mimetype,
       }));
       // Cleanup local temp file
       try { await fsp.unlink(file.path); } catch {}
       return `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${key}`;
     }
-    // Dev fallback (keep local)
-    return `/uploads/videos/${file.filename}`;
+    // Dev fallback (keep local), served from the folder multer wrote it to
+    return `/uploads/${path.basename(path.dirname(file.path))}/${file.filename}`;
   }
 
   app.get("/smooches/identity", requireAuthUnified, async (req, res) => {
@@ -683,7 +684,8 @@ setupSimpleAuth(app);
       const currentUserId = getCurrentUserIdUnified(req);
       if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      // Into the media store: the server's own disk is wiped on every restart.
+      const avatarUrl = await uploadMedia(req.file, 'smooches/avatars');
       const updated = await storage.updateUser(userId, { avatar: avatarUrl });
       const { password, ...safe } = updated;
       res.json(safe);
@@ -759,7 +761,8 @@ setupSimpleAuth(app);
       const { title, description } = req.body;
       if (!title) return res.status(400).json({ message: "Title is required" });
 
-      const videoUrl = `/uploads/videos/${req.file.filename}`;
+      // Into the media store: the server's own disk is wiped on every restart.
+      const videoUrl = await uploadMedia(req.file, 'smooches/videos');
 
       const video = await storage.createVideo({
         userId,

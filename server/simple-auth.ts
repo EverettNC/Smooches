@@ -1,5 +1,7 @@
 import { Express, Request, Response } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
@@ -34,7 +36,13 @@ declare module 'express-session' {
 }
 
 export function setupSimpleAuth(app: Express) {
+  // On AWS the load balancer ends HTTPS, so Express must trust it to know the
+  // visitor came in securely; without this the secure login cookie is never set.
+  app.set("trust proxy", 1);
+  // Sessions live in the database, so a deploy or restart does not log everyone out.
+  const PgSession = connectPgSimple(session);
   app.use(session({
+    store: new PgSession({ pool, tableName: "session", createTableIfMissing: true }),
     secret: process.env.SESSION_SECRET || "smooches-secret-2024",
     resave: false,
     saveUninitialized: false,
