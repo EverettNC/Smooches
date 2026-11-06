@@ -30,13 +30,12 @@ export function Header() {
                 <div className="relative">
                   <div className="absolute -inset-1 bg-brass-gradient opacity-20 blur-lg rounded-full animate-pulse-slow"></div>
                   <img
-                    src="/smooches-logo.jpeg"
+                    src="/smooches-mark.png"
                     alt="SMOOCHES"
-                    className="w-16 h-16 object-cover rounded-full relative z-10 border-2 border-brass/50 hover:border-brass transition-all duration-300 shadow-[0_0_20px_rgba(201,162,75,0.3)]"
-                    style={{filter: 'saturate(1.5) contrast(1.2) sepia(0.2) hue-rotate(-10deg)'}}
+                    className="w-16 h-16 object-cover rounded-full relative z-10 border-2 border-brass/50 hover:border-brass transition-all duration-300 shadow-[0_0_20px_rgba(217,49,13,0.3)]"
                   />
                 </div>
-                <span className="text-2xl font-black bg-brass-gradient bg-clip-text text-transparent tracking-wider drop-shadow-[0_2px_10px_rgba(201,162,75,0.4)]">
+                <span className="text-2xl font-black text-primary tracking-wider">
                   SMOOCHES
                 </span>
                 <Cog className="w-6 h-6 text-brass/60 animate-spin-slow opacity-50" />

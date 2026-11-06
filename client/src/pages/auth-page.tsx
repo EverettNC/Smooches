@@ -62,12 +62,11 @@ export default function AuthPage() {
         <div className="max-w-md mx-auto w-full">
           <div className="flex flex-col items-center gap-8 mb-12">
             <img
-              src="/smooches-logo.jpeg"
-              alt="SMOOCHES"
-              className="w-[3840px] h-[3840px] object-cover rounded-full animate-pulse shadow-2xl border-[40px] border-orange-700 hover:border-red-700 transition-colors"
-              style={{ filter: 'saturate(3) contrast(2) brightness(1.3) hue-rotate(5deg)' }}
+              src="/smooches-mark.png"
+              alt="SMOOCHES lips logo"
+              className="w-48 h-48 md:w-56 md:h-56 rounded-full"
             />
-            <h1 className="text-9xl font-black bg-gradient-to-r from-orange-600 via-red-600 to-blue-700 bg-clip-text text-transparent tracking-wider drop-shadow-2xl text-center animate-bounce" style={{ filter: 'saturate(2) contrast(1.5)' }}>
+            <h1 className="text-6xl md:text-7xl font-black text-primary tracking-wide text-center">
               SMOOCHES
             </h1>
           </div>
@@ -123,7 +122,7 @@ export default function AuthPage() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full bg-gradient-to-r from-orange-700 to-red-700 hover:from-orange-800 hover:to-red-800 text-white font-black py-4 text-xl transition-all transform hover:scale-110 shadow-xl hover:shadow-2xl border-2 border-orange-600" style={{ filter: 'saturate(2) contrast(1.5) brightness(1.2)' }} disabled={loginLoading}>
+                <Button type="submit" className="w-full font-black py-4 text-xl" disabled={loginLoading}>
                   {loginLoading ? "Logging in..." : "🚀 LOGIN"}
                 </Button>
               </form>
@@ -207,7 +206,7 @@ export default function AuthPage() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full bg-gradient-to-r from-blue-700 to-purple-700 hover:from-blue-800 hover:to-purple-800 text-white font-black py-4 text-xl transition-all transform hover:scale-110 shadow-xl hover:shadow-2xl border-2 border-blue-600" style={{ filter: 'saturate(2) contrast(1.5) brightness(1.2)' }} disabled={registerLoading}>
+                <Button type="submit" className="w-full font-black py-4 text-xl" disabled={registerLoading}>
                   {registerLoading ? "Creating account..." : "✨ CREATE ACCOUNT"}
                 </Button>
               </form>

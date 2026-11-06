@@ -97,7 +97,7 @@ export function VideoFeed() {
         </p>
         <Button 
           onClick={() => setLocation("/create")}
-          className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 px-8 py-6 text-lg"
+          className="bg-primary hover:bg-primary/90 px-8 py-6 text-lg"
         >
           Upload a Video
         </Button>

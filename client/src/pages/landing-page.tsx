@@ -20,62 +20,62 @@ export default function LandingPage() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-card/20 to-background">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur sticky top-0 z-50">
+      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="text-3xl">💋</div>
-              <div className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent tracking-wide">
-                SMOOCHES
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setLocation("/auth")}
-              >
-                Sign In
-              </Button>
-              <Button 
-                onClick={() => setLocation("/auth")}
-                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
-              >
-                Get Started
-              </Button>
-            </div>
+          <div className="flex items-center justify-end space-x-3">
+            <Button
+              variant="outline"
+              className="bg-background border-border hover:bg-card"
+              onClick={() => setLocation("/auth")}
+            >
+              Sign In
+            </Button>
+            <Button onClick={() => setLocation("/auth")}>
+              Get Started
+            </Button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center space-y-8">
-          <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+      <section className="pt-6 pb-20 px-4">
+        <div className="container mx-auto text-center space-y-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
+            <img
+              src="/smooches-mark.png"
+              alt="SMOOCHES lips logo"
+              className="w-40 h-40 md:w-64 md:h-64 rounded-full"
+            />
+            <div className="text-5xl sm:text-6xl md:text-8xl font-black tracking-wide text-primary">
+              SMOOCHES
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <h1 className="text-5xl md:text-7xl font-bold text-primary">
               Create. Connect. Earn.
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              The ultimate social media platform for content creators. Share 3-5 minute videos, 
+            <p className="text-xl text-foreground max-w-3xl mx-auto">
+              The ultimate social media platform for content creators. Share 3-5 minute videos,
               host live radio shows, stream interactive content, and monetize your creativity. Silicon serves carbon.
             </p>
           </div>
-          
+
           <div className="flex flex-wrap justify-center gap-4">
-            <Button 
+            <Button
               size="lg"
               onClick={() => setLocation("/auth")}
-              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-lg px-8 py-6"
+              className="text-lg px-8 py-6"
             >
-              <Play className="w-5 h-5 mr-2" />
+              <Play className="w-5 h-5 mr-2 fill-current" />
               Start Creating
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="text-lg px-8 py-6 border-primary/30 hover:border-primary/60"
+              className="text-lg px-8 py-6 bg-background border-border hover:border-primary/60 hover:bg-card"
               onClick={() => setLocation("/auth")}
             >
               <Users className="w-5 h-5 mr-2" />
@@ -86,7 +86,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-card/30">
+      <section className="py-20 px-4 bg-[hsl(0_100%_3%)]">
         <div className="container mx-auto">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-3xl md:text-4xl font-bold">Everything You Need to Succeed</h2>
@@ -97,9 +97,9 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Video Content */}
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:border-primary/40 transition-colors">
+            <Card className="bg-card border-border hover:border-primary/50 transition-colors">
               <CardContent className="p-8 text-center space-y-4">
-                <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto bg-primary rounded-full flex items-center justify-center">
                   <Play className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold">Short-Form Videos</h3>
@@ -112,7 +112,7 @@ export default function LandingPage() {
                     Likes
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    <MessageCircle className="w-4 h-4 mr-1 text-secondary" />
+                    <MessageCircle className="w-4 h-4 mr-1 text-primary" />
                     Comments
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
@@ -124,9 +124,9 @@ export default function LandingPage() {
             </Card>
 
             {/* Radio Stations */}
-            <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 hover:border-secondary/40 transition-colors">
+            <Card className="bg-card border-border hover:border-primary/50 transition-colors">
               <CardContent className="p-8 text-center space-y-4">
-                <div className="w-16 h-16 mx-auto bg-gradient-to-br from-secondary to-secondary/80 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto bg-primary rounded-full flex items-center justify-center">
                   <Radio className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold">Radio Shows</h3>
@@ -139,7 +139,7 @@ export default function LandingPage() {
                     Live Audio
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
-                    <Users className="w-4 h-4 mr-1 text-secondary" />
+                    <Users className="w-4 h-4 mr-1 text-primary" />
                     Subscribers
                   </div>
                 </div>
@@ -147,9 +147,9 @@ export default function LandingPage() {
             </Card>
 
             {/* Live Streaming */}
-            <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 hover:border-accent/40 transition-colors">
+            <Card className="bg-card border-border hover:border-primary/50 transition-colors">
               <CardContent className="p-8 text-center space-y-4">
-                <div className="w-16 h-16 mx-auto bg-gradient-to-br from-accent to-accent/80 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto bg-primary rounded-full flex items-center justify-center">
                   <Tv className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold">Live Streams</h3>
@@ -179,7 +179,7 @@ export default function LandingPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-2">
                 <Star className="w-8 h-8 text-primary" />
-                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                <h2 className="text-3xl md:text-4xl font-bold text-primary">
                   Ambassador Program
                 </h2>
                 <Star className="w-8 h-8 text-accent" />
@@ -191,7 +191,7 @@ export default function LandingPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 mt-12">
-              <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+              <Card className="bg-card border-border">
                 <CardContent className="p-8 space-y-4">
                   <div className="flex items-center gap-3">
                     <TrendingUp className="w-6 h-6 text-primary" />
@@ -204,10 +204,10 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-secondary/5 to-primary/5 border-secondary/20">
+              <Card className="bg-card border-border">
                 <CardContent className="p-8 space-y-4">
                   <div className="flex items-center gap-3">
-                    <Radio className="w-6 h-6 text-secondary" />
+                    <Radio className="w-6 h-6 text-primary" />
                     <h3 className="text-xl font-semibold">Podcast Distribution</h3>
                   </div>
                   <p className="text-muted-foreground">
@@ -221,7 +221,7 @@ export default function LandingPage() {
             <Button 
               size="lg"
               onClick={() => setLocation("/auth")}
-              className="bg-gradient-to-r from-primary via-secondary to-accent hover:from-primary/90 hover:via-secondary/90 hover:to-accent/90 text-lg px-12 py-6 mt-8"
+              className="text-lg px-12 py-6 mt-8"
             >
               <Gift className="w-5 h-5 mr-2" />
               Become an Ambassador
@@ -231,9 +231,9 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-card/50 py-12 px-4">
+      <footer className="border-t border-border bg-background py-12 px-4">
         <div className="container mx-auto text-center">
-          <div className="text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent mb-4">
+          <div className="text-2xl font-black tracking-wide text-primary mb-4">
             SMOOCHES
           </div>
           <p className="text-muted-foreground">

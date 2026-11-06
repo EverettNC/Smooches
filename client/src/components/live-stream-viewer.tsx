@@ -277,7 +277,7 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
         
         <div className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-red-600 to-red-900 flex items-center justify-center text-white">
               {streamerName.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -299,7 +299,7 @@ export function LiveStreamViewer({ streamId, streamerName }: LiveStreamViewerPro
               variant="ghost" 
               size="sm" 
               onClick={sendHeart}
-              className="flex items-center gap-1 text-pink-500"
+              className="flex items-center gap-1 text-red-500"
             >
               <Heart className="w-5 h-5 fill-current" />
               <span>{heartCount}</span>

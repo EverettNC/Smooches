@@ -132,9 +132,9 @@ export function ClipMonetization() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 p-4">
+            <div className="rounded-lg bg-gradient-to-r from-red-600/10 to-red-900/10 p-4">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-purple-500" />
+                <Sparkles className="h-5 w-5 text-orange-500" />
                 <h3 className="font-medium">Clip Creator Premium</h3>
                 <Badge variant="secondary" className="ml-auto">PRO</Badge>
               </div>
@@ -223,11 +223,11 @@ export function ClipMonetization() {
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                <YAxis yAxisId="left" orientation="left" stroke="#d9310d" />
+                <YAxis yAxisId="right" orientation="right" stroke="#f67924" />
                 <Tooltip formatter={(value, name) => [name === 'earnings' ? `$${value}` : value, name === 'earnings' ? 'Earnings' : 'Views']} />
-                <Bar yAxisId="left" dataKey="views" fill="#8884d8" name="Views" />
-                <Bar yAxisId="right" dataKey="earnings" fill="#82ca9d" name="Earnings" />
+                <Bar yAxisId="left" dataKey="views" fill="#d9310d" name="Views" />
+                <Bar yAxisId="right" dataKey="earnings" fill="#f67924" name="Earnings" />
               </BarChart>
             </ResponsiveContainer>
           </div>

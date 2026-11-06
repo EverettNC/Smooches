@@ -358,7 +358,7 @@ export function ClipGenerator({ audioUrl, showName, stationId, userId, onClipGen
                 <Button
                   onClick={handleGeneratePreview}
                   disabled={isGeneratingPreview}
-                  className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary-light hover:opacity-90"
+                  className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
                   size="lg"
                 >
                   {isGeneratingPreview ? (
@@ -629,7 +629,7 @@ export function ClipGenerator({ audioUrl, showName, stationId, userId, onClipGen
             
             <div className="grid grid-cols-2 gap-3">
               <Button variant="outline" className="gap-2 justify-start">
-                <Instagram className="w-4 h-4 text-pink-500" />
+                <Instagram className="w-4 h-4 text-red-500" />
                 Instagram
               </Button>
               <Button variant="outline" className="gap-2 justify-start">

@@ -87,7 +87,7 @@ export default function FeedPage() {
           
           <div className="p-4">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 flex items-center justify-center text-white font-bold shrink-0">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-red-600 to-red-900 flex items-center justify-center text-white font-bold shrink-0">
                 {video.user.charAt(0)}
               </div>
               
@@ -101,7 +101,7 @@ export default function FeedPage() {
                 
                 <div className="flex gap-4 mt-3">
                   <button 
-                    className={`flex items-center gap-1 text-sm ${likedVideos.includes(video.id) ? 'text-pink-500' : 'text-gray-500'}`}
+                    className={`flex items-center gap-1 text-sm ${likedVideos.includes(video.id) ? 'text-red-500' : 'text-gray-500'}`}
                     onClick={() => toggleLike(video.id)}
                   >
                     <Heart className={`w-5 h-5 ${likedVideos.includes(video.id) ? 'fill-current' : ''}`} />

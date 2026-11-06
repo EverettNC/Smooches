@@ -114,7 +114,7 @@ export default {
         },
         "copper-pulse": {
           "0%, 100%": { boxShadow: "0 0 12px var(--copper-glow)" },
-          "50%": { boxShadow: "0 0 32px var(--copper-glow), 0 0 64px rgba(200, 121, 65, 0.2)" },
+          "50%": { boxShadow: "0 0 32px var(--copper-glow), 0 0 64px rgba(217, 49, 13, 0.2)" },
         },
         "brass-shimmer": {
           "0%": { backgroundPosition: "-200% 0" },

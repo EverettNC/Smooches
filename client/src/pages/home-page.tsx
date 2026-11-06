@@ -29,7 +29,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              <div className="text-2xl font-bold text-primary">
                 SMOOCHES
               </div>
               <Badge variant="secondary" className="text-xs">SOCIAL</Badge>
@@ -65,7 +65,7 @@ export default function HomePage() {
             <div className="flex items-center space-x-3">
               <Button
                 onClick={() => setLocation("/create")}
-                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                className="bg-primary hover:bg-primary/90"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Create
@@ -83,7 +83,7 @@ export default function HomePage() {
         {activeTab === "fyp" && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold text-primary">
                 Discover Amazing Content
               </h1>
               <p className="text-muted-foreground">
@@ -101,7 +101,7 @@ export default function HomePage() {
         {activeTab === "radio" && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold text-primary">
                 Live Radio Stations
               </h1>
               <p className="text-muted-foreground">
@@ -149,7 +149,7 @@ export default function HomePage() {
         {activeTab === "live" && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold text-primary">
                 Live Streams
               </h1>
               <p className="text-muted-foreground">
@@ -209,7 +209,7 @@ export default function HomePage() {
             </p>
             <Button 
               onClick={() => setLocation("/monetization")}
-              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+              className="bg-primary hover:bg-primary/90"
             >
               Learn More
             </Button>

@@ -72,9 +72,9 @@ export default function SmoochesFeed() {
   return (
     <div className="flex flex-col gap-8 p-4 max-w-3xl mx-auto pb-20">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-transparent bg-clip-text">Smooches Feed</h1>
+        <h1 className="text-3xl font-bold text-primary">Smooches Feed</h1>
         <div className="flex gap-2">
-          <button className="px-3 py-1 bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 rounded-full text-sm font-medium">For You</button>
+          <button className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full text-sm font-medium">For You</button>
           <button className="px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 rounded-full text-sm font-medium">Following</button>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function SmoochesFeed() {
             <div className="absolute right-4 bottom-4 flex flex-col gap-4">
               <button 
                 onClick={() => handleLike(vid.id)}
-                className={`flex flex-col items-center ${likedVideos.includes(vid.id) ? 'text-pink-500' : 'text-white'}`}
+                className={`flex flex-col items-center ${likedVideos.includes(vid.id) ? 'text-red-500' : 'text-white'}`}
               >
                 <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
                   <Heart className={`w-5 h-5 ${likedVideos.includes(vid.id) ? 'fill-current' : ''}`} />
@@ -126,13 +126,13 @@ export default function SmoochesFeed() {
           
           <div className="p-4">
             <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-r from-red-600 to-red-900 flex items-center justify-center text-white font-bold text-lg shrink-0">
                 {vid.user.charAt(0)}
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <strong className="text-lg">@{vid.user}</strong>
-                  <span className="text-xs bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200 px-2 py-0.5 rounded-full">Creator</span>
+                  <span className="text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 px-2 py-0.5 rounded-full">Creator</span>
                 </div>
                 <p className="text-muted-foreground">{vid.caption}</p>
                 <div className="mt-2 text-xs text-muted-foreground">

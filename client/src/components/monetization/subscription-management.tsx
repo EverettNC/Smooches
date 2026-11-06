@@ -54,9 +54,9 @@ export function SubscriptionManagement() {
 
   // Subscriber tier distribution
   const tierDistributionData = [
-    { name: 'Basic', value: 45, color: '#8884d8' },
-    { name: 'Premium', value: 35, color: '#82ca9d' },
-    { name: 'VIP', value: 20, color: '#ffc658' },
+    { name: 'Basic', value: 45, color: '#d9310d' },
+    { name: 'Premium', value: 35, color: '#f67924' },
+    { name: 'VIP', value: 20, color: '#9b0100' },
   ];
 
   // Subscription plans
@@ -468,7 +468,7 @@ export function SubscriptionManagement() {
                       <Line
                         type="monotone"
                         dataKey="subscribers"
-                        stroke="#8884d8"
+                        stroke="#d9310d"
                         activeDot={{ r: 8 }}
                       />
                     </LineChart>
@@ -495,7 +495,7 @@ export function SubscriptionManagement() {
                           cy="50%"
                           labelLine={false}
                           outerRadius={80}
-                          fill="#8884d8"
+                          fill="#d9310d"
                           dataKey="value"
                           label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         >

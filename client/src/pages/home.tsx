@@ -18,7 +18,7 @@ export default function HomePage() {
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link href="/feed">
-            <Button size="lg" className="bg-gradient-to-r from-pink-500 to-purple-600 border-none">
+            <Button size="lg" className="bg-gradient-to-r from-red-600 to-red-900 border-none">
               <Video className="mr-2 h-5 w-5" />
               <span>Explore Feed</span>
             </Button>

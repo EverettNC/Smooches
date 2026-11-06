@@ -116,7 +116,7 @@ export default function LivePage() {
             <div className="space-y-3">
               <Card className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center text-white font-bold">
                     DJ
                   </div>
                   <div>
@@ -136,7 +136,7 @@ export default function LivePage() {
 
               <Card className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-amber-500 to-red-500 flex items-center justify-center text-white font-bold">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center text-white font-bold">
                     CM
                   </div>
                   <div>
@@ -156,7 +156,7 @@ export default function LivePage() {
 
               <Card className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center text-white font-bold">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center text-white font-bold">
                     MT
                   </div>
                   <div>

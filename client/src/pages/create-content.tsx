@@ -147,7 +147,7 @@ export default function CreateContentPage() {
       <div className="container mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-primary">
             Create Content
           </h1>
           <p className="text-muted-foreground">
@@ -306,7 +306,7 @@ export default function CreateContentPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                  className="w-full bg-primary hover:bg-primary/90"
                   disabled={createVideoMutation.isPending}
                 >
                   <Upload className="w-4 h-4 mr-2" />
@@ -372,7 +372,7 @@ export default function CreateContentPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90"
+                  className="w-full bg-primary hover:bg-primary/90"
                   disabled={createRadioMutation.isPending}
                 >
                   <Radio className="w-4 h-4 mr-2" />
@@ -406,7 +406,7 @@ export default function CreateContentPage() {
               
               <Button 
                 onClick={() => setLocation("/live")}
-                className="bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90"
+                className="bg-primary hover:bg-primary/90"
                 size="lg"
               >
                 <Tv className="w-5 h-5 mr-2" />
