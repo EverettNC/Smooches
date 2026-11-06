@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -151,10 +152,11 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="privacy" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="privacy">Privacy</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="creator">Creator Tools</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
           </TabsList>
 
           <TabsContent value="privacy" className="mt-6">
@@ -454,8 +456,70 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="account" className="mt-6">
+            <ChangePassword />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
+  );
+}
+
+function ChangePassword() {
+  const { toast } = useToast();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [again, setAgain] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (next !== again) {
+      toast({ title: "Passwords don't match", description: "Type the new password the same way twice.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      const value = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(value.error || `Password was not changed (error ${response.status})`);
+      setCurrent(""); setNext(""); setAgain("");
+      toast({ title: "Password changed", description: "Everyone else signed in to this account has been signed out." });
+    } catch (error: any) {
+      toast({ title: "Password not changed", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Change password</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-4 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="current-password">Current password</Label>
+            <Input id="current-password" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">New password (at least 10 characters)</Label>
+            <Input id="new-password" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} minLength={10} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password-again">New password again</Label>
+            <Input id="new-password-again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} minLength={10} required />
+          </div>
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Change password"}</Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

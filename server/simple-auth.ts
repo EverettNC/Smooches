@@ -83,6 +83,33 @@ export function setupSimpleAuth(app: Express) {
   });
 
   // Register endpoint
+  app.post("/api/auth/change-password", async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const { currentPassword, newPassword } = req.body ?? {};
+      if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+        return res.status(400).json({ error: "Current and new password are required" });
+      }
+      if (newPassword.length < 10) return res.status(400).json({ error: "The new password needs at least 10 characters" });
+      if (newPassword === currentPassword) return res.status(400).json({ error: "The new password must be different" });
+      const user = await storage.getUser(userId);
+      if (!user || !(await comparePasswords(currentPassword, user.password))) {
+        return res.status(401).json({ error: "Current password is wrong" });
+      }
+      await storage.updateUser(userId, { password: await hashPassword(newPassword), updatedAt: new Date() });
+      // Anyone else signed in to this account (on another phone or computer) is signed out.
+      await pool.query(
+        `delete from "session" where sid <> $1 and (sess->>'userId') = $2`,
+        [req.sessionID, String(userId)]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ error: "Password was not changed" });
+    }
+  });
+
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const { username, email, password, displayName } = req.body;
