@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BrandDecor } from "@/components/brand-decor";
 import { Switch, Route, Link, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -84,9 +85,12 @@ function Router() {
   
   // If authenticated, show the full application
   return (
-    <div>
+    <div className="relative">
+      <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none">
+        <BrandDecor variant="page" />
+      </div>
       <Header />
-      <div className="pt-20">
+      <div className="relative z-10 pt-20">
         <Switch>
           <Route path="/" component={HomePage} />
           <Route path="/profile/:id" component={Profile} />

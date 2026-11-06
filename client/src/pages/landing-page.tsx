@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { BrandDecor } from "@/components/brand-decor";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
@@ -40,8 +41,9 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-6 pb-20 px-4">
-        <div className="container mx-auto text-center space-y-10">
+      <section className="relative pt-6 pb-20 px-4">
+        <BrandDecor variant="hero" />
+        <div className="relative z-10 container mx-auto text-center space-y-10">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
             <img
               src="/smooches-mark.png"
@@ -231,8 +233,9 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-background py-12 px-4">
-        <div className="container mx-auto text-center">
+      <footer className="relative border-t border-border bg-background py-12 px-4 overflow-hidden">
+        <BrandDecor variant="panel" />
+        <div className="relative z-10 container mx-auto text-center">
           <div className="text-2xl font-black tracking-wide text-primary mb-4">
             SMOOCHES
           </div>

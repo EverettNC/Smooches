@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent } from "react";
+import { BrandDecor } from "@/components/brand-decor";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth-simple";
 import { Button } from "@/components/ui/button";
@@ -58,8 +59,9 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left side - Auth form */}
-      <div className="flex-1 flex flex-col justify-center p-10">
-        <div className="max-w-md mx-auto w-full">
+      <div className="relative flex-1 flex flex-col justify-center p-10">
+        <BrandDecor variant="panel" />
+        <div className="relative z-10 max-w-md mx-auto w-full">
           <div className="flex flex-col items-center gap-8 mb-12">
             <img
               src="/smooches-mark.png"
@@ -194,8 +196,9 @@ export default function AuthPage() {
       </div>
 
       {/* Right side - Hero section */}
-      <div className="hidden md:flex flex-1 bg-gradient-to-br from-primary to-secondary text-white">
-        <div className="p-10 flex flex-col justify-center max-w-lg mx-auto">
+      <div className="relative overflow-hidden hidden md:flex flex-1 bg-gradient-to-br from-primary to-secondary text-white">
+        <BrandDecor variant="panel" />
+        <div className="relative z-10 p-10 flex flex-col justify-center max-w-lg mx-auto">
           <h2 className="text-3xl font-bold mb-4">
             Stream, Share, and Succeed
           </h2>
