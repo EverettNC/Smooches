@@ -14,9 +14,15 @@ import {
   DollarSign,
   Send,
   X,
-  ChevronUp
+  ChevronUp,
+  Volume2,
+  VolumeX
 } from "lucide-react";
-import { type Video } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { type Video, type User } from "@shared/schema";
+
+// Once someone turns sound on, the next videos play with sound too.
+let soundChosen = false;
 import { EmojiReactions } from "./emoji-reactions";
 import { useAuth } from "@/hooks/use-auth-simple";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +37,10 @@ interface VideoPlayerProps {
 export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  // Browsers only let a video start on its own if it is silent; sound comes on with the first tap.
+  const [isMuted, setIsMuted] = useState(!soundChosen);
+  const [playFailed, setPlayFailed] = useState(false);
+  const { data: creator } = useQuery<User>({ queryKey: [`/api/users/${video.userId}`], enabled: !!video.userId });
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState("");
@@ -113,17 +123,27 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
     };
   }, [autoPlay]);
 
+  const setSound = (on: boolean) => {
+    soundChosen = on;
+    setIsMuted(!on);
+    if (videoRef.current) videoRef.current.muted = !on;
+  };
+
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play().catch(console.error);
-        // Unmute on the first user interaction just like TikTok
-        videoRef.current.muted = false; 
-      }
-      setIsPlaying(!isPlaying);
+    const el = videoRef.current;
+    if (!el) return;
+    // First tap on a silent video turns the sound on instead of stopping it.
+    if (isPlaying && el.muted) {
+      setSound(true);
+      return;
     }
+    if (isPlaying) {
+      el.pause();
+    } else {
+      setSound(true);
+      el.play().catch(console.error);
+    }
+    setIsPlaying(!isPlaying);
   };
 
   const seekTo = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -201,7 +221,7 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
         src={video.videoUrl}
         className="absolute inset-0 w-full h-full object-contain"
         playsInline
-        muted
+        muted={isMuted}
         autoPlay={autoPlay}
         preload="auto"
         controls={false}
@@ -214,13 +234,23 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
           }
         }}
         onEnded={() => onEnded && onEnded()}
-        onError={(e) => {
-          const video = e.currentTarget;
-          if (video.src && !video.src.includes('sample')) {
-            video.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-          }
-        }}
+        onError={() => setPlayFailed(true)}
       />
+
+      {playFailed && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 text-white/80 text-center p-6">
+          This video couldn't be played.
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setSound(isMuted)}
+        aria-label={isMuted ? "Turn sound on" : "Turn sound off"}
+        className="absolute top-4 left-4 z-30 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center hover:bg-primary/60 transition-colors"
+      >
+        {isMuted ? <VolumeX className="w-6 h-6 text-white" /> : <Volume2 className="w-6 h-6 text-white" />}
+      </button>
 
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
@@ -240,7 +270,8 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/50 to-transparent z-10">
+      {/* Taps fall through to the video except on the buttons, so a tap anywhere on the picture works */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/50 to-transparent z-10 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto [&_input]:pointer-events-auto">
         <div className="flex items-end justify-between">
           <div className="flex-1">
             <h3 className="text-xl font-bold text-white mb-2">{video.title}</h3>
@@ -248,14 +279,16 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
             
             <div className="flex items-center mt-3">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 mr-3">
-                <img 
-                  src={`https://api.dicebear.com/7.x/micah/svg?seed=${video.userId}`} 
-                  alt="Creator" 
-                  className="w-full h-full object-cover"
-                />
+                {creator?.avatar ? (
+                  <img src={creator.avatar} alt={creator.displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold bg-primary">
+                    {creator?.displayName?.charAt(0).toUpperCase() || ""}
+                  </div>
+                )}
               </div>
               <div>
-                <p className="text-white font-medium">@creator{video.userId}</p>
+                <p className="text-white font-medium">{creator ? `@${creator.username}` : ""}</p>
                 <Button variant="outline" size="sm" className="mt-1 h-7 text-xs rounded-full bg-primary/20 border-primary/50 hover:bg-primary/40">
                   Follow
                 </Button>
@@ -274,12 +307,12 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
                     const res = await fetch(`/api/videos/${video.id}/like`, { method: 'POST', credentials: 'include' });
                     if (res.ok) {
                       const data = await res.json();
-                      setRealLikes(data.likes || realLikes + 1);
+                      if (typeof data.likes === "number") setRealLikes(data.likes);
                     } else {
-                      setRealLikes(prev => prev + 1);
+                      toast({ title: "Like not saved", description: res.status === 401 ? "Sign in to like videos." : "Please try again.", variant: "destructive" });
                     }
                   } catch {
-                    setRealLikes(prev => prev + 1);
+                    toast({ title: "Like not saved", description: "Please try again.", variant: "destructive" });
                   }
                 }}
               >
