@@ -25,6 +25,11 @@ import path from 'path';
 import fs from 'fs';
 import { generateClipTitle, generateClipDescription } from "./openai";
 
+// Uploads wait here briefly before going to the media store; make sure the folders exist.
+for (const folder of ['public/uploads/videos', 'public/uploads/avatars']) {
+  fs.mkdirSync(path.join(process.cwd(), folder), { recursive: true });
+}
+
 // Multer storage config
 const videoStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -659,7 +664,7 @@ setupSimpleAuth(app);
     try {
       const user = await storage.getUser(parseInt(req.params.id));
       if (!user) return res.status(404).json({ message: "User not found" });
-      const { password, ...safe } = user;
+      const { password, settings, ...safe } = user;
       res.json(safe);
     } catch (e) { res.status(500).json({ message: "Failed to fetch user" }); }
   });
@@ -669,10 +674,14 @@ setupSimpleAuth(app);
       const userId = parseInt(req.params.id);
       const currentUserId = getCurrentUserIdUnified(req);
       if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
-      const { displayName, bio, location, website, avatar } = req.body;
-      if (!displayName) return res.status(400).json({ message: "Display name is required" });
-      const updated = await storage.updateUser(userId, { displayName, bio: bio || null, location: location || null, website: website || null, avatar: avatar || null });
-      const { password, ...safe } = updated;
+      const { displayName, bio, location, website } = req.body ?? {};
+      if (typeof displayName !== "string" || !displayName.trim()) return res.status(400).json({ message: "Display name is required" });
+      // The picture is saved through /avatar into the media store; a profile save never touches it.
+      const updated = await storage.updateUser(userId, {
+        displayName: displayName.trim(), bio: bio || null, location: location || null, website: website || null,
+        updatedAt: new Date(),
+      });
+      const { password, settings, ...safe } = updated;
       res.json(safe);
     } catch (e) { res.status(500).json({ message: "Failed to update profile" }); }
   });
@@ -686,20 +695,45 @@ setupSimpleAuth(app);
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       // Into the media store: the server's own disk is wiped on every restart.
       const avatarUrl = await uploadMedia(req.file, 'smooches/avatars');
-      const updated = await storage.updateUser(userId, { avatar: avatarUrl });
-      const { password, ...safe } = updated;
+      const updated = await storage.updateUser(userId, { avatar: avatarUrl, updatedAt: new Date() });
+      const { password, settings, ...safe } = updated;
       res.json(safe);
     } catch (e) { res.status(500).json({ message: "Failed to upload avatar" }); }
   });
 
-  // Settings (stored client-side, but route must exist)
+  // Settings: kept on the user's own record so they are there next time, on any device
+  app.get("/api/users/:id/settings", requireAuthUnified, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const currentUserId = getCurrentUserIdUnified(req);
+      if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json({ settings: user.settings ?? null });
+    } catch (e) { res.status(500).json({ message: "Failed to load settings" }); }
+  });
+
   app.patch("/api/users/:id/settings", requireAuthUnified, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       const currentUserId = getCurrentUserIdUnified(req);
       if (!currentUserId || currentUserId !== userId) return res.status(403).json({ message: "Unauthorized" });
-      // Settings are client-side preferences; acknowledge save
-      res.json({ success: true, settings: req.body });
+      const body = req.body;
+      const sections = ["privacy", "notifications", "creator"];
+      if (!body || typeof body !== "object" || Array.isArray(body)) return res.status(400).json({ message: "Settings must be an object" });
+      const clean: Record<string, Record<string, boolean>> = {};
+      for (const section of sections) {
+        const values = body[section];
+        if (values === undefined) continue;
+        if (!values || typeof values !== "object" || Array.isArray(values)) return res.status(400).json({ message: `${section} must be an object` });
+        clean[section] = {};
+        for (const [key, value] of Object.entries(values)) {
+          if (typeof value !== "boolean") return res.status(400).json({ message: `${section}.${key} must be true or false` });
+          clean[section][key] = value;
+        }
+      }
+      const updated = await storage.updateUser(userId, { settings: clean, updatedAt: new Date() });
+      res.json({ success: true, settings: updated.settings });
     } catch (e) { res.status(500).json({ message: "Failed to save settings" }); }
   });
 

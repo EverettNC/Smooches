@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -73,11 +73,27 @@ export default function Settings() {
     },
   });
 
+  const { data: saved } = useQuery<{ settings: Partial<UserSettings> | null }>({
+    queryKey: [`/api/users/${user?.id}/settings`],
+    enabled: !!user?.id,
+  });
+
+  useEffect(() => {
+    const stored = saved?.settings;
+    if (!stored) return;
+    setSettings((current) => ({
+      privacy: { ...current.privacy, ...(stored.privacy ?? {}) },
+      notifications: { ...current.notifications, ...(stored.notifications ?? {}) },
+      creator: { ...current.creator, ...(stored.creator ?? {}) },
+    }));
+  }, [saved]);
+
   const updateSettingsMutation = useMutation({
     mutationFn: async (newSettings: UserSettings) => {
       const response = await fetch(`/api/users/${user?.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(newSettings),
       });
       if (!response.ok) throw new Error("Failed to update settings");
@@ -95,6 +111,10 @@ export default function Settings() {
         description: "Failed to save your settings. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      // Show what is really stored, whether the save worked or not.
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/settings`] });
     },
   });
 

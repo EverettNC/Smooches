@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth-simple";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -26,8 +26,7 @@ const profileEditSchema = z.object({
   displayName: z.string().min(1, "Display name is required"),
   bio: z.string().optional(),
   location: z.string().optional(),
-  website: z.string().url().optional().or(z.literal("")),
-  avatar: z.string().optional(),
+  website: z.string().url("Enter the full address, starting with https://").optional().or(z.literal("")),
 });
 
 export default function Profile() {
@@ -36,6 +35,7 @@ export default function Profile() {
   const userId = params?.id ? parseInt(params.id) : user?.id || 0;
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -56,9 +56,20 @@ export default function Profile() {
       bio: profileUser?.bio || "",
       location: profileUser?.location || "",
       website: profileUser?.website || "",
-      avatar: profileUser?.avatar || "",
     },
   });
+
+  useEffect(() => {
+    if (!profileUser || !isEditOpen) return;
+    form.reset({
+      displayName: profileUser.displayName || "",
+      bio: profileUser.bio || "",
+      location: profileUser.location || "",
+      website: profileUser.website || "",
+    });
+    setAvatarPreview(null);
+    setAvatarFile(null);
+  }, [profileUser, isEditOpen, form]);
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,12 +83,9 @@ export default function Profile() {
         return;
       }
 
+      setAvatarFile(file);
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        setAvatarPreview(dataUrl);
-        form.setValue("avatar", dataUrl);
-      };
+      reader.onload = (event) => setAvatarPreview(event.target?.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -93,7 +101,23 @@ export default function Profile() {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error("Failed to update profile");
+        const problem = await response.json().catch(() => null);
+        throw new Error(problem?.message || `Profile was not saved (error ${response.status})`);
+      }
+      // The picture goes to the media store as a file, not inside the profile.
+      if (avatarFile) {
+        const upload = new FormData();
+        upload.append("avatar", avatarFile);
+        const pictureResponse = await fetch(`/api/users/${userId}/avatar`, {
+          method: "POST",
+          credentials: "include",
+          body: upload,
+        });
+        if (!pictureResponse.ok) {
+          const problem = await pictureResponse.json().catch(() => null);
+          throw new Error(problem?.message || `Your details were saved, but the picture was not (error ${pictureResponse.status})`);
+        }
+        return pictureResponse.json();
       }
       return response.json();
     },
@@ -103,6 +127,7 @@ export default function Profile() {
         description: "Your profile has been successfully updated.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setIsEditOpen(false);
     },
     onError: (error) => {

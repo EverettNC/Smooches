@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { LogOut, UserCircle, Settings, Crown, Home, Video, Radio as RadioIcon, Plus, Cog, Zap } from "lucide-react";
+import { LogOut, UserCircle, Settings, Crown, Home, Video, Radio as RadioIcon, Plus, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Header() {
@@ -27,18 +27,14 @@ export function Header() {
             {/* Brand */}
             <Link href="/">
               <div className="flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform duration-300">
-                <div className="relative">
-                  <div className="absolute -inset-1 bg-brass-gradient opacity-20 blur-lg rounded-full animate-pulse-slow"></div>
-                  <img
-                    src="/smooches-mark.png"
-                    alt="SMOOCHES"
-                    className="w-16 h-16 object-cover rounded-full relative z-10 border-2 border-brass/50 hover:border-brass transition-all duration-300 shadow-[0_0_20px_rgba(217,49,13,0.3)]"
-                  />
-                </div>
+                <img
+                  src="/smooches-mark.png"
+                  alt="SMOOCHES"
+                  className="w-14 h-14 shrink-0 rounded-full"
+                />
                 <span className="text-2xl font-black text-primary tracking-wider">
                   SMOOCHES
                 </span>
-                <Cog className="w-6 h-6 text-brass/60 animate-spin-slow opacity-50" />
               </div>
             </Link>
          

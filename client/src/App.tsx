@@ -57,6 +57,16 @@ function Router() {
     );
   }
   
+  // Wait to learn who is signed in; otherwise a refresh on /profile or /settings
+  // is sent back to the front page before the account has loaded.
+  if (authContext.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <img src="/smooches-mark.png" alt="" className="w-20 h-20 rounded-full animate-pulse" />
+      </div>
+    );
+  }
+
   // If not authenticated, show landing page or auth page
   if (!currentUser) {
     return (
