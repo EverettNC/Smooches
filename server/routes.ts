@@ -6,6 +6,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import * as fsp from "fs/promises";
 import { storage } from "./storage";
 import { setupSimpleAuth } from "./simple-auth";
+import { registerPaymentRoutes } from "./payments";
 import {
   insertVideoSchema,
   insertCommentSchema,
@@ -161,6 +162,7 @@ function getCurrentUserIdUnified(req: Request): number | undefined {
 
 // Register simple-auth routes (login, register, logout, /api/auth/user)
 setupSimpleAuth(app);
+registerPaymentRoutes(app);
 
   const httpServer = createServer(app);
 

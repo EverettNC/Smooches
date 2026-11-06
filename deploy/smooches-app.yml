@@ -134,6 +134,15 @@ Resources:
       GenerateSecretString:
         PasswordLength: 64
         ExcludePunctuation: true
+  # The Stripe key for coins and gifts. It starts empty; Everett pastes the key into
+  # the Payments box in Smooches settings and the app writes it here. It is never shown again.
+  StripeSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: Smooches Stripe key, set from the Payments box in Smooches settings
+      SecretString: '{}'
 
   # --- Database
   DatabaseSubnetGroup:
@@ -232,6 +241,13 @@ Resources:
               - Effect: Allow
                 Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
                 Resource: !Sub '${MediaBucket.Arn}/*'
+        - PolicyName: smooches-stripe-key
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [secretsmanager:GetSecretValue, secretsmanager:PutSecretValue]
+                Resource: !Ref StripeSecret
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -258,6 +274,7 @@ Resources:
             - {Name: DB_HOST, Value: !GetAtt Database.Endpoint.Address}
             - {Name: S3_BUCKET, Value: !Ref MediaBucket}
             - {Name: AWS_REGION, Value: !Ref AWS::Region}
+            - {Name: STRIPE_SECRET_ID, Value: !Ref StripeSecret}
           Secrets:
             - {Name: DB_PASSWORD, ValueFrom: !Sub '${DatabaseSecret}:password::'}
             - {Name: SESSION_SECRET, ValueFrom: !Ref SessionSecret}

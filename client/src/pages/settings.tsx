@@ -51,6 +51,7 @@ export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isOwner = (user as any)?.role === "admin";
 
   const [settings, setSettings] = useState<UserSettings>({
     privacy: {
@@ -152,11 +153,12 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="privacy" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${isOwner ? "grid-cols-5" : "grid-cols-4"}`}>
             <TabsTrigger value="privacy">Privacy</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="creator">Creator Tools</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
+            {isOwner && <TabsTrigger value="payments">Payments</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="privacy" className="mt-6">
@@ -460,6 +462,12 @@ export default function Settings() {
           <TabsContent value="account" className="mt-6">
             <ChangePassword />
           </TabsContent>
+
+          {isOwner && (
+            <TabsContent value="payments" className="mt-6">
+              <PaymentsSetup />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
@@ -518,6 +526,60 @@ function ChangePassword() {
             <Input id="new-password-again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} minLength={10} required />
           </div>
           <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Change password"}</Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+function PaymentsSetup() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [key, setKey] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { data: status } = useQuery<{ configured: boolean; mode?: string; keyEnd?: string; vault?: boolean }>({
+    queryKey: ["/api/admin/payments"],
+  });
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const response = await fetch("/api/admin/payments/key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ key }),
+      });
+      const value = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(value.error || `The key was not saved (error ${response.status})`);
+      setKey("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] });
+      toast({ title: "Stripe connected", description: "The key is locked in the vault. It won't be shown again." });
+    } catch (error: any) {
+      toast({ title: "Stripe not connected", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Payments</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground" role="status">
+          {status?.configured
+            ? `Stripe is connected (${status.mode === "live" ? "real payments" : "test mode"}), key ending ${status.keyEnd}.`
+            : "Stripe is not connected yet."}
+        </p>
+        <form onSubmit={save} className="space-y-4 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="stripe-key">{status?.configured ? "Replace the Stripe key" : "Stripe restricted key"}</Label>
+            <Input id="stripe-key" type="password" autoComplete="off" spellCheck={false} value={key}
+                   onChange={(e) => setKey(e.target.value)} placeholder="rk_live_..." required />
+          </div>
+          <Button type="submit" disabled={saving || !key.trim()}>{saving ? "Checking with Stripe..." : "Connect Stripe"}</Button>
         </form>
       </CardContent>
     </Card>
