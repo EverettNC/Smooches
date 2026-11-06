@@ -16,7 +16,8 @@ CMD ["npx", "drizzle-kit", "push", "--force"]
 
 FROM public.ecr.aws/docker/library/node:18-alpine AS production
 WORKDIR /app
-RUN apk add --no-cache cairo pango jpeg giflib pixman
+# ffmpeg gives ffprobe, which reads each upload's real length
+RUN apk add --no-cache cairo pango jpeg giflib pixman ffmpeg
 COPY package*.json ./
 # The full dependency set: the built server still imports vite and the
 # vite config's plugins at start-up, so pruning dev packages breaks it.

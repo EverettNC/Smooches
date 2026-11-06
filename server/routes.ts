@@ -24,6 +24,23 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { generateClipTitle, generateClipDescription } from "./openai";
+import { execFile } from 'child_process';
+import { videoLengthProblem } from "@shared/video-length";
+
+// Read a video's real length from the file itself, so the 5 second to 3 minute rule
+// holds even if someone skips the app and posts straight to the server.
+function probeSeconds(filePath: string): Promise<number> {
+  return new Promise((resolve) => {
+    execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', filePath],
+      { timeout: 20000 }, (error, stdout) => resolve(error ? NaN : Number(String(stdout).trim())));
+  });
+}
+
+async function videoLengthRefusal(file: any): Promise<string | null> {
+  const problem = videoLengthProblem(await probeSeconds(file.path));
+  if (problem) fs.promises.unlink(file.path).catch(() => {});
+  return problem;
+}
 
 // Uploads wait here briefly before going to the media store; make sure the folders exist.
 for (const folder of ['public/uploads/videos', 'public/uploads/avatars']) {
@@ -74,7 +91,7 @@ const uploadAvatar = multer({
   }
 });
 
-// Audio upload for radio / audio content (3-5min focus)
+// Audio upload for radio / audio content
 const audioStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, path.join(process.cwd(), 'public/uploads/videos')); // reuse videos dir or audio
@@ -373,7 +390,7 @@ setupSimpleAuth(app);
   });
 
   // ── SMOOCHES CREATOR API (8030) ────────────────────────────────────────────
-  // /identity, /video (3-5min+radio), /live (+gifting), /ambassador (monetization+Prime+podcast)
+  // /identity, /video (5s-3min + radio), /live (+gifting), /ambassador (monetization+Prime+podcast)
   // Creator-first: 85% revenue, no exploitation. Strict upward to /source/ingest (see DISPATCH.md).
 
   app.get("/smooches/health", (_req, res) => {
@@ -479,7 +496,7 @@ setupSimpleAuth(app);
     } catch (e) { res.status(500).json({ error: "Identity failed" }); }
   });
 
-  // POST /smooches/video (3-5min + radio) — detect/extract/verify/post then upward dispatch.
+  // POST /smooches/video (5s-3min + radio) — detect/extract/verify/post then upward dispatch.
   app.post("/smooches/video", requireAuthUnified, uploadAudio.fields([{ name: 'video', maxCount: 1 }, { name: 'audio', maxCount: 1 }]), async (req: any, res) => {
     try {
       const userId = getCurrentUserIdUnified(req)!;
@@ -489,13 +506,18 @@ setupSimpleAuth(app);
       if (!title) return res.status(400).json({ error: "Title required" });
       if (!file && !sourceUrl) return res.status(400).json({ error: "No media file (use field video or audio)" });
 
-      // detect / extract / verify (3-5min focus)
+      // detect / verify: videos are 5 seconds to 3 minutes
       const detectedType = contentType;
-      const url = sourceUrl || await uploadMedia(file, 'smooches');
-      const extractedDuration = duration ? Number(duration) : null;
-      if (detectedType === 'video' && extractedDuration != null && (extractedDuration < 180 || extractedDuration > 300)) {
-        console.log(`[verify] video duration ${extractedDuration}s outside 180-300s focus (still accepted)`);
+      let extractedDuration: number | null = duration ? Number(duration) : null;
+      if (detectedType === 'video') {
+        if (file) extractedDuration = await probeSeconds(file.path);
+        const lengthProblem = videoLengthProblem(extractedDuration ?? NaN);
+        if (lengthProblem) {
+          if (file) fs.promises.unlink(file.path).catch(() => {});
+          return res.status(400).json({ error: lengthProblem });
+        }
       }
+      const url = sourceUrl || await uploadMedia(file, 'smooches');
 
       let record: any;
       if (detectedType === 'radio') {
@@ -531,7 +553,7 @@ setupSimpleAuth(app);
       };
 
       const ingest = await forwardToIngest(dispatch); // flow complete only on success (see DISPATCH.md)
-      res.status(201).json({ success: true, record, ingest, creatorRevenueShare: "85%", note: "3-5min videos + radio supported", trace_id });
+      res.status(201).json({ success: true, record, ingest, creatorRevenueShare: "85%", note: "videos 5 seconds to 3 minutes + radio supported", trace_id });
     } catch (e: any) { res.status(500).json({ error: e.message || "video failed" }); }
   });
 
@@ -793,7 +815,12 @@ setupSimpleAuth(app);
       if (!req.file) return res.status(400).json({ message: "No video file uploaded" });
 
       const { title, description } = req.body;
-      if (!title) return res.status(400).json({ message: "Title is required" });
+      if (!title) {
+        fs.promises.unlink(req.file.path).catch(() => {});
+        return res.status(400).json({ message: "Title is required" });
+      }
+      const lengthProblem = await videoLengthRefusal(req.file);
+      if (lengthProblem) return res.status(400).json({ message: lengthProblem });
 
       // Into the media store: the server's own disk is wiped on every restart.
       const videoUrl = await uploadMedia(req.file, 'smooches/videos');

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { videoLengthProblem } from "@shared/video-length";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,13 +109,10 @@ export default function CreateContentPage() {
       
       const duration = videoElement.duration;
 
-      // 3-5min focus
-      if (duration < 120 || duration > 360) {
-        toast({
-          title: "Duration note",
-          description: "Best between ~3-5 minutes for the For You experience.",
-          variant: "destructive",
-        });
+      const problem = videoLengthProblem(duration);
+      if (problem) {
+        toast({ title: "Video length", description: problem, variant: "destructive" });
+        return;
       }
 
       // If it passes, execute the upload
@@ -169,11 +167,11 @@ export default function CreateContentPage() {
               <Video className="w-8 h-8 mx-auto text-primary" />
               <div>
                 <h3 className="font-semibold">Video</h3>
-                <p className="text-sm text-muted-foreground">3-5 min focus • you keep 85%</p>
+                <p className="text-sm text-muted-foreground">5 sec to 3 min • you keep 85%</p>
               </div>
               <Badge variant={contentType === "video" ? "default" : "outline"}>
                 <Clock className="w-3 h-3 mr-1" />
-                10s - 7m
+                5s - 3m
               </Badge>
             </CardContent>
           </Card>
@@ -245,7 +243,7 @@ export default function CreateContentPage() {
                     className="file:bg-primary file:text-primary-foreground file:border-0 file:rounded-md file:px-4 file:py-2"
                   />
                   <p className="text-xs text-muted-foreground">
-                    3-5 minute videos • you keep 85% • Supported: MP4, MOV, audio for radio/podcast
+                    Videos 5 seconds to 3 minutes • you keep 85% • Supported: MP4, MOV, audio for radio/podcast
                   </p>
                 </div>
 

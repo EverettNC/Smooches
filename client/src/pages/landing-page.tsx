@@ -58,7 +58,7 @@ export default function LandingPage() {
               Create. Connect. Earn.
             </h1>
             <p className="text-xl text-foreground max-w-3xl mx-auto">
-              The ultimate social media platform for content creators. Share 3-5 minute videos,
+              The ultimate social media platform for content creators. Share videos from 5 seconds to 3 minutes,
               host live radio shows, stream interactive content, and monetize your creativity. Silicon serves carbon.
             </p>
           </div>
@@ -104,7 +104,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-semibold">Short-Form Videos</h3>
                 <p className="text-muted-foreground">
-                  Create engaging 3-5 minute videos for the For You Page. Get likes, comments, and gifts from your audience.
+                  Create videos from 5 seconds to 3 minutes for the For You Page. Get likes, comments, and gifts from your audience.
                 </p>
                 <div className="flex justify-center space-x-4 pt-2">
                   <div className="flex items-center text-sm text-muted-foreground">
