@@ -1,49 +1,36 @@
-# Multi-stage build for SMOOCHES production deployment
-FROM node:18-alpine AS builder
-
-# Set working directory
+# SMOOCHES production image.
+# Base images come from Amazon's public mirror of the official Node images,
+# so builds are not held up by Docker Hub's pull limits.
+FROM public.ecr.aws/docker/library/node:18-alpine AS builder
 WORKDIR /app
-
-# Copy package files
+# canvas and bcrypt compile natively on Alpine
+RUN apk add --no-cache python3 make g++ cairo-dev pango-dev jpeg-dev giflib-dev pixman-dev
 COPY package*.json ./
-
-# Install all dependencies (including devDeps needed for build)
 RUN npm ci
-
-# Copy source code
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine AS production
+# Production dependencies only, compiled with the same toolchain
+FROM builder AS proddeps
+RUN npm prune --omit=dev
 
-# Set working directory
+# Schema sync: run once per deploy as a one-off task (drizzle-kit push)
+FROM builder AS migrate
+CMD ["npx", "drizzle-kit", "push", "--force"]
+
+FROM public.ecr.aws/docker/library/node:18-alpine AS production
 WORKDIR /app
-
-# Copy package files
+RUN apk add --no-cache cairo pango jpeg giflib pixman
 COPY package*.json ./
-
-# Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy built application from builder stage
+COPY --from=proddeps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/server ./server
-
-# Expose port
-EXPOSE 8030
-
-# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=8030
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S smooches -u 1001
+EXPOSE 8030
+RUN addgroup -g 1001 -S nodejs && adduser -S smooches -u 1001 \
+ && mkdir -p /app/public/uploads/videos /app/public/uploads/avatars \
+ && chown -R smooches:nodejs /app/public
 USER smooches
-
-# Start the application
 CMD ["node", "dist/index.js"]

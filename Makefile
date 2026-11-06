@@ -45,7 +45,14 @@ docker-build:
 docker-run:
 	docker run --rm -p 8030:8030 --env-file .env smooches:latest
 
-# AWS - Infrastructure
+# AWS - Live deploy (since 2026-11-06): part 2 runs from deploy/smooches-app.yml
+# (stack smooches-app) on top of part 1 (stack smooches-foundation). Images are
+# built in AWS CodeBuild (project smooches-image, buildspec.yml).
+deploy-app:
+	aws cloudformation deploy --template-file deploy/smooches-app.yml --stack-name smooches-app \
+		--capabilities CAPABILITY_IAM --parameter-overrides ImageTag=$${IMAGE_TAG:-latest} --region us-east-1
+
+# AWS - Infrastructure (older single-stack template, kept for reference)
 deploy-infra:
 	@if [ -z "$$DATABASE_PASSWORD" ] || [ -z "$$SESSION_SECRET" ]; then \
 		echo "❌ Set DATABASE_PASSWORD and SESSION_SECRET env vars"; exit 1; \
@@ -56,11 +63,6 @@ deploy-infra:
 		--parameter-overrides \
 			DatabasePassword="$$DATABASE_PASSWORD" \
 			SessionSecret="$$SESSION_SECRET" \
-			StripeSecretKey="$${STRIPE_SECRET_KEY:-}" \
-			StripePublishableKey="$${STRIPE_PUBLISHABLE_KEY:-}" \
-			StripeWebhookSecret="$${STRIPE_WEBHOOK_SECRET:-}" \
-			OpenAIKey="$${OPENAI_API_KEY:-}" \
-			DispatchIngestHost="$${DISPATCH_INGEST_HOST:-}" \
 		--capabilities CAPABILITY_IAM \
 		--region $${AWS_REGION:-us-east-1}
 
@@ -93,8 +95,6 @@ deploy-app-runner: deploy-infra push-image
 	@echo "     SESSION_SECRET=$$SESSION_SECRET"
 	@echo "     S3_BUCKET=smooches-media-<AWS_ACCOUNT_ID>"
 	@echo "     DISPATCH_INGEST_HOST=$${DISPATCH_INGEST_HOST:-<your-ingest-service>}"
-	@echo "     OPENAI_API_KEY=$${OPENAI_API_KEY:-}"
-	@echo "     STRIPE_SECRET_KEY=$${STRIPE_SECRET_KEY:-}"
 	@echo ""
 	@echo "Then run: make migrate"
 

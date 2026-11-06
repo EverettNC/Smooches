@@ -1,0 +1,21 @@
+version: 0.2
+# AWS CodeBuild: builds the Smooches app image and its schema-sync image, pushes both to ECR.
+env:
+  variables:
+    REPO: 846769760150.dkr.ecr.us-east-1.amazonaws.com/smooches
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 846769760150.dkr.ecr.us-east-1.amazonaws.com
+      - TAG=$(date +%Y%m%d%H%M%S)
+  build:
+    commands:
+      - docker build --target production -t $REPO:$TAG -t $REPO:latest .
+      - docker build --target migrate -t $REPO:migrate-$TAG -t $REPO:migrate .
+  post_build:
+    commands:
+      - docker push $REPO:$TAG
+      - docker push $REPO:latest
+      - docker push $REPO:migrate-$TAG
+      - docker push $REPO:migrate
+      - echo "IMAGE_TAG=$TAG"
