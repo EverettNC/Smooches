@@ -106,7 +106,7 @@ export function VideoFeed() {
   }
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] bg-black">
+    <div className="relative h-[calc(100vh-6rem)] md:h-[calc(100vh-10.5rem)] bg-black/40 rounded-xl">
       {/* Refresh button */}
       <Button 
         variant="ghost" 
@@ -124,9 +124,10 @@ export function VideoFeed() {
         {videos.map((video, index) => (
           <div
             key={video.id}
-            className="snap-start h-full w-full flex flex-col items-center justify-center"
+            className="snap-start h-full w-full flex flex-col items-center justify-center p-2 [container-type:size]"
           >
             <VideoPlayer 
+              fill
               video={video} 
               autoPlay={index === currentIndex} 
               onEnded={() => {

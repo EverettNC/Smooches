@@ -32,14 +32,17 @@ interface VideoPlayerProps {
   video: Video;
   autoPlay?: boolean;
   onEnded?: () => void;
+  // In the For You feed the video takes the whole screen it is given.
+  fill?: boolean;
 }
 
-export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerProps) {
+export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   // Browsers only let a video start on its own if it is silent; sound comes on with the first tap.
   const [isMuted, setIsMuted] = useState(!soundChosen);
   const [playFailed, setPlayFailed] = useState(false);
+  const [shape, setShape] = useState<number | null>(null); // width / height of this video
   const { data: creator } = useQuery<User>({ queryKey: [`/api/users/${video.userId}`], enabled: !!video.userId });
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -213,7 +216,8 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
   };
 
   return (
-    <Card className="relative w-full max-w-4xl mx-auto bg-black overflow-hidden shadow-xl" style={{ aspectRatio: '16/9' }}>
+    <Card className={fill ? "relative w-full h-full mx-auto bg-black overflow-hidden shadow-xl" : "relative w-full max-w-4xl mx-auto bg-black overflow-hidden shadow-xl"}
+          style={fill ? (shape ? { aspectRatio: String(shape), height: "auto", width: `min(100cqw, ${(100 * shape).toFixed(2)}cqh)` } : undefined) : { aspectRatio: '16/9' }}>
       <div id="gift-container" className="absolute inset-0 pointer-events-none z-20"></div>
       
       <video
@@ -235,6 +239,10 @@ export function VideoPlayer({ video, autoPlay = false, onEnded }: VideoPlayerPro
         }}
         onEnded={() => onEnded && onEnded()}
         onError={() => setPlayFailed(true)}
+        onLoadedMetadata={(e) => {
+          const el = e.currentTarget;
+          if (el.videoWidth && el.videoHeight) setShape(el.videoWidth / el.videoHeight);
+        }}
       />
 
       {playFailed && (

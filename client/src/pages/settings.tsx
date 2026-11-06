@@ -134,7 +134,7 @@ export default function Settings() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background p-4">
+      <div className="min-h-screen p-4">
         <div className="container max-w-4xl mx-auto">
           <div className="text-center py-8">
             <p className="text-muted-foreground">Please log in to access settings</p>
@@ -145,7 +145,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen p-4">
       <div className="container max-w-4xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
           <SettingsIcon className="h-6 w-6" />

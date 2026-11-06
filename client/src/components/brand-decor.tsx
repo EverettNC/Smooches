@@ -124,7 +124,7 @@ function Layer({ id, w, h, strength, children, className }: {
 }
 
 export function BrandDecor({ variant = "hero", className = "" }: { variant?: Variant; className?: string }) {
-  const strength = variant === "page" ? 0.28 : variant === "panel" ? 0.7 : 0.95;
+  const strength = variant === "page" ? 0.6 : variant === "panel" ? 0.75 : 0.95;
   const id = `smooches-decor-${variant}`;
   return (
     <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}

@@ -32,7 +32,7 @@ export function Header() {
                   alt="SMOOCHES"
                   className="w-14 h-14 shrink-0 rounded-full"
                 />
-                <span className="text-2xl font-black text-primary tracking-wider">
+                <span className="hidden sm:inline text-2xl font-black text-primary tracking-wider">
                   SMOOCHES
                 </span>
               </div>
@@ -40,41 +40,41 @@ export function Header() {
          
             {/* Main Navigation + Search */}
             {user && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0 sm:gap-2">
                 <Link href="/">
-                  <Button variant="ghost" size="lg" className="flex items-center gap-2 text-lg font-bold hover:bg-brass/10 hover:text-brass transition-all duration-300 border border-transparent hover:border-brass/50 relative overflow-hidden">
+                  <Button variant="ghost" size="lg" className="flex items-center gap-2 px-2 lg:px-4 text-lg font-bold hover:bg-brass/10 hover:text-brass transition-all duration-300 border border-transparent hover:border-brass/50 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-brass/5 via-transparent to-brass/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Home className="w-5 h-5 relative z-10" />
-                    <span className="relative z-10">For You</span>
+                    <span className="relative z-10 hidden lg:inline">For You</span>
                   </Button>
                 </Link>
                 <Link href="/live">
-                  <Button variant="ghost" size="lg" className="flex items-center gap-2 text-lg font-bold hover:bg-teal/10 hover:text-teal transition-all duration-300 border border-transparent hover:border-teal/50 relative overflow-hidden">
+                  <Button variant="ghost" size="lg" className="flex items-center gap-2 px-2 lg:px-4 text-lg font-bold hover:bg-teal/10 hover:text-teal transition-all duration-300 border border-transparent hover:border-teal/50 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-teal/5 via-transparent to-teal/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Video className="w-5 h-5 relative z-10" />
-                    <span className="relative z-10">Live</span>
-                    <Zap className="w-4 h-4 relative z-10 text-teal animate-pulse" />
+                    <span className="relative z-10 hidden lg:inline">Live</span>
+                    <Zap className="w-4 h-4 relative z-10 text-teal animate-pulse hidden lg:inline" />
                   </Button>
                 </Link>
                 <Link href="/radio">
-                  <Button variant="ghost" size="lg" className="flex items-center gap-2 text-lg font-bold hover:bg-brass-mid/10 hover:text-brass-mid transition-all duration-300 border border-transparent hover:border-brass-mid/50 relative overflow-hidden">
+                  <Button variant="ghost" size="lg" className="flex items-center gap-2 px-2 lg:px-4 text-lg font-bold hover:bg-brass-mid/10 hover:text-brass-mid transition-all duration-300 border border-transparent hover:border-brass-mid/50 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-brass-mid/5 via-transparent to-brass-mid/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <RadioIcon className="w-5 h-5 relative z-10" />
-                    <span className="relative z-10">Radio</span>
+                    <span className="relative z-10 hidden lg:inline">Radio</span>
                   </Button>
                 </Link>
                 <Link href="/create">
-                  <Button variant="ghost" size="lg" className="flex items-center gap-2 text-lg font-bold hover:bg-brass-hi/10 hover:text-brass-hi transition-all duration-300 border border-transparent hover:border-brass-hi/50 relative overflow-hidden">
+                  <Button variant="ghost" size="lg" className="flex items-center gap-2 px-2 lg:px-4 text-lg font-bold hover:bg-brass-hi/10 hover:text-brass-hi transition-all duration-300 border border-transparent hover:border-brass-hi/50 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-brass-hi/5 via-transparent to-brass-hi/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Plus className="w-5 h-5 relative z-10" />
-                    <span className="relative z-10">Create</span>
+                    <span className="relative z-10 hidden lg:inline">Create</span>
                   </Button>
                 </Link>
                 <Link href={`/profile/${user.id}`}>
-                  <Button variant="ghost" size="lg" className="flex items-center gap-2 text-lg font-bold hover:bg-brass-lo/10 hover:text-brass-lo transition-all duration-300 border border-transparent hover:border-brass-lo/50 relative overflow-hidden">
+                  <Button variant="ghost" size="lg" className="flex items-center gap-2 px-2 lg:px-4 text-lg font-bold hover:bg-brass-lo/10 hover:text-brass-lo transition-all duration-300 border border-transparent hover:border-brass-lo/50 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-brass-lo/5 via-transparent to-brass-lo/5 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <UserCircle className="w-5 h-5 relative z-10" />
-                    <span className="relative z-10">Profile</span>
+                    <span className="relative z-10 hidden lg:inline">Profile</span>
                   </Button>
                 </Link>
               </div>
@@ -82,7 +82,7 @@ export function Header() {
 
           {/* Search (basic discovery / indexing) */}
           {user && (
-            <div className="relative w-64">
+            <div className="relative w-64 hidden xl:block">
               <input
                 className="w-full bg-panel border border-brass/30 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-brass focus:ring-2 focus:ring-brass/30 bg-panel/80 backdrop-blur placeholder:text-ink-tertiary"
                 placeholder="Search videos, clips, radio..."

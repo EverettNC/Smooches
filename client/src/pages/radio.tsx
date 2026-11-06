@@ -86,7 +86,7 @@ export default function Radio() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-background p-4">
+      <main className="min-h-screen p-4">
         <div className="container max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold mb-8 text-center">Radio Hub</h1>
           <div className="space-y-4">
@@ -98,7 +98,7 @@ export default function Radio() {
   }
 
   return (
-    <main className="min-h-screen bg-background p-4">
+    <main className="min-h-screen p-4">
       <div className="container max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Radio Hub</h1>

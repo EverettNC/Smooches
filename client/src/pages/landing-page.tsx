@@ -88,8 +88,9 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-[hsl(0_100%_3%)]">
-        <div className="container mx-auto">
+      <section className="relative overflow-hidden py-20 px-4 bg-[hsl(0_100%_3%)]">
+        <BrandDecor variant="panel" />
+        <div className="relative z-10 container mx-auto">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-3xl md:text-4xl font-bold">Everything You Need to Succeed</h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -175,8 +176,9 @@ export default function LandingPage() {
       </section>
 
       {/* Ambassador Program */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto">
+      <section className="relative overflow-hidden py-20 px-4">
+        <BrandDecor variant="panel" />
+        <div className="relative z-10 container mx-auto">
           <div className="text-center space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-2">

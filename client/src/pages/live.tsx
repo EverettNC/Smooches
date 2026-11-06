@@ -33,7 +33,7 @@ export default function LivePage() {
   const [selectedStream, setSelectedStream] = useState(featuredStreams[0]);
   
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen p-4">
       <div className="container mx-auto max-w-6xl">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">🔴 Live Streaming</h1>

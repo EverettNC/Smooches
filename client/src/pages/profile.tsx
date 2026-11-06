@@ -144,7 +144,7 @@ export default function Profile() {
   };
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen">
       <div className="container max-w-4xl mx-auto py-8">
         <div className="flex items-center justify-between mb-6">
           <UserProfile userId={userId} detailed />
