@@ -10,10 +10,6 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Production dependencies only, compiled with the same toolchain
-FROM builder AS proddeps
-RUN npm prune --omit=dev
-
 # Schema sync: run once per deploy as a one-off task (drizzle-kit push)
 FROM builder AS migrate
 CMD ["npx", "drizzle-kit", "push", "--force"]
@@ -22,7 +18,9 @@ FROM public.ecr.aws/docker/library/node:18-alpine AS production
 WORKDIR /app
 RUN apk add --no-cache cairo pango jpeg giflib pixman
 COPY package*.json ./
-COPY --from=proddeps /app/node_modules ./node_modules
+# The full dependency set: the built server still imports vite and the
+# vite config's plugins at start-up, so pruning dev packages breaks it.
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/server ./server
