@@ -13,9 +13,11 @@ export function VideoFeed() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, setLocation] = useLocation();
   
-  const [page, setPage] = useState(1);
+  // One list, newest first, from one query. (2026-11-06: the feed asked for a
+  // new "page" near the end; each page was a new query, so the list emptied,
+  // the feed redrew and the viewer was thrown back to the top.)
   const { data: apiVideos, isLoading, refetch } = useQuery<Video[]>({
-    queryKey: ["/api/videos", page],
+    queryKey: ["/api/videos"],
   });
   
   // The Feed is now 100% live. No mock data.
@@ -29,11 +31,6 @@ export function VideoFeed() {
       
       if (newIndex !== currentIndex) {
         setCurrentIndex(newIndex);
-        
-        // Load more content when approaching the end
-        if (newIndex > videos.length - 3) {
-          setPage(prev => prev + 1);
-        }
       }
     }
   };
@@ -126,19 +123,13 @@ export function VideoFeed() {
             key={video.id}
             className="snap-start h-full w-full flex flex-col items-center justify-center p-2 [container-type:size]"
           >
+            {/* A video plays over until the viewer moves on; the feed no longer
+                rolls itself forward (2026-11-06). */}
             <VideoPlayer 
               fill
+              loop
               video={video} 
               autoPlay={index === currentIndex} 
-              onEnded={() => {
-                if (index < videos.length - 1) {
-                  const next = index + 1;
-                  if (containerRef.current) {
-                    containerRef.current.scrollTo({ top: next * containerRef.current.clientHeight, behavior: 'smooth' });
-                  }
-                  setCurrentIndex(next);
-                }
-              }}
             />
           </div>
         ))}

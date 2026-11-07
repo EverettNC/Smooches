@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useFollow } from "@/hooks/use-follow";
 import type { User } from "@shared/schema";
 
 interface UserProfileProps {
@@ -12,37 +11,10 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ userId, detailed = false }: UserProfileProps) {
-  const [isFollowing, setIsFollowing] = useState(false);
-  const { toast } = useToast();
-
   const { data: user, isLoading } = useQuery<User>({
     queryKey: [`/api/users/${userId}`],
   });
-
-  const handleFollow = async () => {
-    try {
-      if (isFollowing) {
-        await fetch(`/api/follows/0/${userId}`, { method: "DELETE", credentials: "include" });
-        setIsFollowing(false);
-        toast({ title: "Unfollowed", description: `You unfollowed ${user?.displayName}` });
-      } else {
-        const res = await fetch("/api/follows", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ followingId: userId }),
-        });
-        if (res.status === 401) {
-          toast({ title: "Sign in required", description: "You must be signed in to follow creators", variant: "destructive" });
-          return;
-        }
-        setIsFollowing(true);
-        toast({ title: "Following!", description: `You are now following ${user?.displayName}` });
-      }
-    } catch {
-      toast({ title: "Error", description: "Something went wrong. Try again.", variant: "destructive" });
-    }
-  };
+  const follow = useFollow(userId, user?.username);
 
   if (isLoading) {
     return <Skeleton className="w-full h-12" />;
@@ -97,9 +69,11 @@ export function UserProfile({ userId, detailed = false }: UserProfileProps) {
         </div>
       )}
 
-      <Button variant={isFollowing ? "outline" : "secondary"} size="sm" onClick={handleFollow}>
-        {isFollowing ? "Following" : "Follow"}
-      </Button>
+      {!follow.isSelf && (
+        <Button variant={follow.following ? "outline" : "secondary"} size="sm" onClick={follow.toggle} disabled={follow.busy}>
+          {follow.following ? "Following" : "Follow"}
+        </Button>
+      )}
     </div>
   );
 }

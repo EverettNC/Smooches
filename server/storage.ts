@@ -34,7 +34,7 @@ import {
   type InsertClip,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql, lte, gte } from "drizzle-orm";
+import { eq, and, sql, lte, gte, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -51,6 +51,7 @@ export interface IStorage {
   getVideo(id: number): Promise<Video | undefined>;
   getVideos(): Promise<Video[]>;
   getUserVideos(userId: number): Promise<Video[]>;
+  deleteVideo(id: number): Promise<void>;
   createVideo(video: InsertVideo): Promise<Video>;
   updateVideoLikes(id: number, likes: number): Promise<void>;
   updateVideoComments(id: number, count: number): Promise<void>;
@@ -62,6 +63,7 @@ export interface IStorage {
   // Follows
   createFollow(follow: InsertFollow): Promise<Follow>;
   deleteFollow(followerId: number, followingId: number): Promise<void>;
+  isFollowing(followerId: number, followingId: number): Promise<boolean>;
   getFollowers(userId: number): Promise<User[]>;
   getFollowing(userId: number): Promise<User[]>;
 
@@ -152,8 +154,21 @@ export class DatabaseStorage implements IStorage {
     return video;
   }
 
+  // Newest first, in the same order every time, so the For You feed does not
+  // reshuffle under the viewer (2026-11-06).
   async getVideos(): Promise<Video[]> {
-    return await db.select().from(videos);
+    return await db.select().from(videos).orderBy(desc(videos.createdAt), desc(videos.id));
+  }
+
+  // A creator's video comes down with its comments and reactions. Money records
+  // that named it stay, with the video id cleared (2026-11-06).
+  async deleteVideo(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(comments).where(eq(comments.videoId, id));
+      await tx.delete(reactions).where(and(eq(reactions.targetType, "video"), eq(reactions.targetId, id)));
+      await tx.update(transactions).set({ videoId: null }).where(eq(transactions.videoId, id));
+      await tx.delete(videos).where(eq(videos.id, id));
+    });
   }
 
   async getUserVideos(userId: number): Promise<Video[]> {
@@ -254,6 +269,13 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ followers: followerCount[0].count })
       .where(eq(users.id, followingId));
+  }
+
+  async isFollowing(followerId: number, followingId: number): Promise<boolean> {
+    const [row] = await db.select({ id: follows.id }).from(follows)
+      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+      .limit(1);
+    return !!row;
   }
 
   async getFollowers(userId: number): Promise<User[]> {

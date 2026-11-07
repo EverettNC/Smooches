@@ -16,9 +16,15 @@ import {
   X,
   ChevronUp,
   Volume2,
-  VolumeX
+  VolumeX,
+  Trash2
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useFollow } from "@/hooks/use-follow";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { type Video, type User } from "@shared/schema";
 
 // Once someone turns sound on, the next videos play with sound too.
@@ -34,9 +40,11 @@ interface VideoPlayerProps {
   onEnded?: () => void;
   // In the For You feed the video takes the whole screen it is given.
   fill?: boolean;
+  // Play the video over again instead of ending (the For You feed, 2026-11-06).
+  loop?: boolean;
 }
 
-export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false }: VideoPlayerProps) {
+export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false, loop = false }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   // Browsers only let a video start on its own if it is silent; sound comes on with the first tap.
@@ -55,6 +63,29 @@ export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false }: 
   const [commentsLoading, setCommentsLoading] = useState(false);
 
   const { toast } = useToast();
+  const qc = useQueryClient();
+  const follow = useFollow(video.userId, creator?.username);
+  // The creator, or the owner role, can take this video down (2026-11-06).
+  const canDelete = !!user && (user.id === video.userId || (user as any).role === "admin");
+  const [deleting, setDeleting] = useState(false);
+  const deleteVideo = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/videos/${video.id}`, { method: "DELETE", credentials: "include" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.message || `Error ${res.status}`);
+      qc.invalidateQueries({ queryKey: ["/api/videos"] });
+      qc.invalidateQueries({ queryKey: [`/api/users/${video.userId}/videos`] });
+      toast({
+        title: "Video deleted",
+        description: body?.filesNotRemoved ? "It is gone from Smooches; its file could not be removed from storage yet." : undefined,
+      });
+    } catch (err) {
+      toast({ title: "Video not deleted", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const loadComments = async () => {
     setCommentsLoading(true);
@@ -124,6 +155,19 @@ export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false }: 
       videoElement.removeEventListener('play', handlePlay);
       videoElement.removeEventListener('pause', handlePause);
     };
+  }, [autoPlay]);
+
+  // In the feed only the video on screen plays: one scrolled away stops, and
+  // the one scrolled to starts (2026-11-06; with videos playing over, one left
+  // behind would otherwise keep going under the next).
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (autoPlay) {
+      el.play().catch(() => {});
+    } else if (!el.paused) {
+      el.pause();
+    }
   }, [autoPlay]);
 
   const setSound = (on: boolean) => {
@@ -227,6 +271,7 @@ export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false }: 
         playsInline
         muted={isMuted}
         autoPlay={autoPlay}
+        loop={loop}
         preload="auto"
         controls={false}
         onClick={togglePlay}
@@ -297,9 +342,16 @@ export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false }: 
               </div>
               <div>
                 <p className="text-white font-medium">{creator ? `@${creator.username}` : ""}</p>
-                <Button variant="outline" size="sm" className="mt-1 h-7 text-xs rounded-full bg-primary/20 border-primary/50 hover:bg-primary/40">
-                  Follow
-                </Button>
+                {creator && !follow.isSelf && (
+                  <Button
+                    variant="outline" size="sm"
+                    className="mt-1 h-7 text-xs rounded-full bg-primary/20 border-primary/50 hover:bg-primary/40"
+                    onClick={follow.toggle}
+                    disabled={follow.busy}
+                  >
+                    {follow.following ? "Following" : "Follow"}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -366,6 +418,32 @@ export function VideoPlayer({ video, autoPlay = false, onEnded, fill = false }: 
               </Button>
               <span className="text-white text-xs mt-1">Save</span>
             </div>
+
+            {canDelete && (
+              <div className="flex flex-col items-center">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Delete this video" disabled={deleting}
+                      className="rounded-full bg-black/30 backdrop-blur-md hover:bg-destructive/60">
+                      <Trash2 className="w-6 h-6 text-white" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this video?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        "{video.title}" comes off Smooches for everyone, with its comments and reactions. This can't be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep it</AlertDialogCancel>
+                      <AlertDialogAction onClick={deleteVideo}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <span className="text-white text-xs mt-1">Delete</span>
+              </div>
+            )}
           </div>
         </div>
         

@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import * as fsp from "fs/promises";
 import { storage } from "./storage";
 import { setupSimpleAuth } from "./simple-auth";
@@ -802,6 +802,43 @@ registerPaymentRoutes(app);
     res.json(videos);
   });
 
+  // A creator removes their own video (2026-11-06). The owner role may remove
+  // any video. The files come out of the media bucket too; a file that cannot
+  // be removed is reported, not hidden.
+  app.delete("/api/videos/:id", requireAuthUnified, async (req, res) => {
+    const userId = getCurrentUserIdUnified(req);
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const id = parseInt(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ message: "Not a video id" });
+    const video = await storage.getVideo(id);
+    if (!video) return res.status(404).json({ message: "Video not found" });
+    const me = await storage.getUser(userId);
+    if (video.userId !== userId && me?.role !== "admin") {
+      return res.status(403).json({ message: "Only the creator can delete this video" });
+    }
+    try {
+      await storage.deleteVideo(id);
+    } catch (e) {
+      console.error("video delete failed:", e);
+      return res.status(500).json({ message: "The video could not be deleted. Please try again." });
+    }
+    const notRemoved: string[] = [];
+    const bucket = process.env.S3_BUCKET;
+    if (s3 && bucket) {
+      const prefix = `https://${bucket}.s3.amazonaws.com/`;
+      for (const url of [video.videoUrl, video.thumbnail]) {
+        if (!url || !url.startsWith(prefix)) continue;
+        try {
+          await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: decodeURIComponent(url.slice(prefix.length)) }));
+        } catch {
+          notRemoved.push(url);
+        }
+      }
+    }
+    if (notRemoved.length) console.error("video files not removed from the bucket:", notRemoved.length);
+    res.json({ deleted: id, filesNotRemoved: notRemoved.length });
+  });
+
   app.get("/api/videos/:id", async (req, res) => {
     const video = await storage.getVideo(parseInt(req.params.id));
     if (!video) return res.status(404).json({ message: "Video not found" });
@@ -874,11 +911,26 @@ registerPaymentRoutes(app);
 
   // ── FOLLOWS ────────────────────────────────────────────────────────────────
 
+  // Whether the signed-in viewer follows this creator (2026-11-06).
+  app.get("/api/follows/status/:userId", requireAuthUnified, async (req, res) => {
+    const me = getCurrentUserIdUnified(req);
+    if (!me) return res.status(401).json({ message: "Not authenticated" });
+    const them = parseInt(req.params.userId);
+    if (!Number.isInteger(them)) return res.status(400).json({ message: "Not a user id" });
+    res.json({ following: await storage.isFollowing(me, them), self: me === them, me });
+  });
+
   app.post("/api/follows", requireAuthUnified, async (req, res) => {
     try {
       const followerId = getCurrentUserIdUnified(req);
       const result = insertFollowSchema.safeParse({ ...req.body, followerId });
       if (!result.success) return res.status(400).json({ message: "Invalid follow data" });
+      const followingId = result.data.followingId;
+      if (!followingId) return res.status(400).json({ message: "Who to follow is missing" });
+      if (followingId === followerId) return res.status(400).json({ message: "You can't follow yourself" });
+      if (!(await storage.getUser(followingId))) return res.status(404).json({ message: "That creator was not found" });
+      // Following twice is still one follow (2026-11-06).
+      if (followerId && await storage.isFollowing(followerId, followingId)) return res.status(200).json({ followerId, followingId, already: true });
       const follow = await storage.createFollow(result.data);
       res.status(201).json(follow);
     } catch (e) { res.status(500).json({ message: "Failed to follow" }); }
